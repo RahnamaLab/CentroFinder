@@ -3,36 +3,53 @@
 # Last Modified:
 
 # To run this on TTU HPC:
-#     spack load trf snakemake
+#     spack load trf snakemake graphviz
 # sample run line:
 #     snakemake -np --config sample=Guy11_Final_S4
 #         OR
 #     snakemake --cores 12 --config sample=Guy11_Final_S4
+# Create DAG: snakemake --dag --config sample=Guy11_Final_S4 | dot -Tsvg > test.svg
 
-from pathlib import Path
+#from pathlib import Path
 
 configfile: "config.yaml"
 
-SAMPLES = config["samples"]
-OUTPUT_DIR = config["output_dir"]
-
 rule all:
     input:
-        expand(f"{{sample}}_trf.bed", sample=SAMPLES)
+       expand("results/{sample}_trf.bed", sample=config["samples"])
 
 rule trf1:
     input:
-        "../nanopore/{sample}.fasta"
+        "data/nanopore/{sample}.fasta"
     output:
-        f"{{sample}}.fasta.2.7.7.80.10.50.2000.dat"  ##### FIXME: hardcoded variables
+        "results/{sample}.fasta.2.7.7.80.10.50.2000.dat"  ##### FIXME: hardcoded variables
     log:
         "logs/trf1_{sample}.log"
     run:
+        os.makedirs(os.path.dirname(output[0]), exist_ok=True)
+        os.makedirs(os.path.dirname(log[0]), exist_ok=True)
+
+        # Set the work directory for TRF to "results/" 
+        results_dir = os.path.dirname(output[0])
+
+        # Show TRF where the input will be from "results/"
+        input_rel = os.path.relpath(input[0], results_dir)
+
         # This code modified from https://stackoverflow.com/questions/45613881/what-would-be-an-elegant-way-of-preventing-snakemake-from-failing-upon-shell-r-e
         try:
-            proc_output = subprocess.check_output(f"trf {input} 2 7 7 80 10 50 2000 -h", shell=True)
+            proc_output = subprocess.check_output(f"trf {input_rel} 2 7 7 80 10 50 2000 -h", shell=True, cwd=results_dir, stderr=subprocess.STDOUT)
+
+            # Log what TRF is doing
+            with open(log[0], "wb") as lf:
+                lf.write(proc_output)
+
         # an exception is raised by check_output() for non-zero exit codes (usually returned to indicate failure)
         except subprocess.CalledProcessError as exc: 
+            # Capture errors in the log as well
+            with open(log[0], "wb") as lf: 
+                if exc.output:
+                    lf.write(exc.output)
+
             if exc.returncode == 7: #### FIXME: this is taken from the above hardcoded numbers
                 # this exit code is OK
                 pass
@@ -42,9 +59,9 @@ rule trf1:
 
 rule trf2:
     input:
-        f"{{sample}}.fasta.2.7.7.80.10.50.2000.dat"     ##### FIXME: hardcoded variables
+        "results/{sample}.fasta.2.7.7.80.10.50.2000.dat"     ##### FIXME: hardcoded variables
     output:
-        f"{{sample}}_trf.bed"
+        "results/{sample}_trf.bed"
     log:
         "logs/trf2_{sample}.log"
     shell:
@@ -52,5 +69,5 @@ rule trf2:
         python3 trf2bed.py \
             --dat {input} \
             --bed {output} \
-            --tool repeatseq
+            --tool repeatseq &> {log}
         """
