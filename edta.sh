@@ -8,7 +8,14 @@
 #SBATCH --time=2-00:00:00
 
 spack load singularityce
-spack load samtools/f6zgopc cdhit
+spack load samtools/f6zgopc cdhit  gffread bedops
+
+
+
+input=$1 #genome name
+
+gffread -x ${input}_cds.fasta -g $input.fasta $input.gff3
+gff2bed < $input.gff3 > $input.bed
 
 
 
