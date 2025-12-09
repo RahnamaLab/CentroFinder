@@ -1,6 +1,6 @@
 # Created By: Sharon Colson
 # Creation Date: 12/01/2025
-# Last Modified: 12/05/2025
+# Last Modified: 12/09/2025
 
 # To run this on TTU HPC:
 #     spack load trf snakemake graphviz
@@ -9,6 +9,9 @@
 #         OR
 #     snakemake --cores 12
 # Create DAG: snakemake --dag | dot -Tsvg > test.svg
+
+import os
+import subprocess
 
 configfile: "config.yaml"
 
@@ -51,6 +54,17 @@ def get_gff3(wildcards):
 def get_fastq(wildcards):
     return get_path_with_ext(wildcards, "fastq")
 
+#def get_cds(wildcards):
+#    base = get_base_dir(wildcards.sample)
+#    return f"{base}/{wildcards.sample}_cds.fasta"
+
+#def get_bedmask(wildcards):
+#    return get_path_with_ext(wildcards, "bed")
+
+#def get_edta_gff3(wildcards):
+#    base = get_base_dir(wildcards.sample)
+#    return f"{base}/{wildcards.sample}.fasta.mod.EDTA.TEanno.gff3"
+
 # Order for TRF and filename suffix
 TRF_NUMERIC_VALUES = [MATCH, MISMATCH, DELTA, PM, PI, MINSCORE, MAXPERIOD]
 
@@ -64,7 +78,8 @@ TRF_SUFFIX = "." + ".".join(str(num) for num in TRF_NUMERIC_VALUES) + ".dat"
 
 rule all:
     input:
-        expand("results/{sample}_trf.bed", sample=SAMPLES_LIST)
+        expand("results/{sample}_trf.bed", sample=SAMPLES_LIST),
+        expand("results/{sample}_edta.bed", sample=SAMPLES_LIST)
 
 rule run_trf:
     input:
@@ -72,7 +87,7 @@ rule run_trf:
     output:
         "results/{sample}.fasta" + TRF_SUFFIX
     log:
-        "logs/trf1_{sample}.log"
+        "logs/run_trf_{sample}.log"
     run:
         os.makedirs(os.path.dirname(output[0]), exist_ok=True)
         os.makedirs(os.path.dirname(log[0]), exist_ok=True)
@@ -118,7 +133,7 @@ rule convert_trf_to_bed:
     output:
         "results/{sample}_trf.bed"
     log:
-        "logs/trf2_{sample}.log"
+        "logs/convert_trf_to_bed_{sample}.log"
     shell:
         r"""
         mkdir -p $(dirname {output}) $(dirname {log})
@@ -128,11 +143,116 @@ rule convert_trf_to_bed:
             --tool repeatseq &> {log}
         """
 
-#rule edta:
-#    input:
-#        get_fasta
-#        get_gff3
-#    output:
-#        "results/{sample}_edta.bed"
-    
+rule edta_cds:
+    input:
+        fasta = get_fasta,
+        gff = get_gff3
+    output:
+        cds = "results/edta/{sample}/{sample}_cds.fasta"
+#        cds = get_cds
+    log:
+        "logs/edta_cds_{sample}.log"
+    shell:
+        r"""
+        mkdir -p $(dirname {output.cds}) $(dirname {log})
 
+        gffread -x {output.cds} -g {input.fasta} {input.gff} &> {log}
+        """
+
+rule edta_gff2bed:
+    input:
+        gff = get_gff3
+    output:
+        bed = "results/edta/{sample}/{sample}.bed"
+#        bed = get_bedmask
+    log:
+        "logs/edta_bed_{sample}.log"
+    shell:
+        r"""
+        mkdir -p $(dirname {output.bed}) $(dirname {log})
+
+        gff2bed < {input.gff} > {output.bed} 2> {log}
+        """
+
+rule edta_run:
+    input:
+        fasta = get_fasta,
+        cds = "results/edta/{sample}/{sample}_cds.fasta",
+        bed = "results/edta/{sample}/{sample}.bed"
+    output:
+        edta_gff3 = "results/edta/{sample}/{sample}.fasta.mod.EDTA.TEanno.gff3"
+#        edta_gff3 = get_edta_gff3
+    params:
+        container_bin   = config["container"]["binary"],
+        container_binds = ",".join(config["container"]["binds"]),
+        container_env   = " ".join(
+            f'{k}={v}' for k, v in config["container"]["env"].items()
+        ),
+        edta_sif          = config["edta"]["sif"],
+        edta_species      = config["edta"]["species"],
+        edta_overwrite    = config["edta"]["overwrite"],
+        edta_sensitive    = config["edta"]["sensitive"],
+        edta_anno         = config["edta"]["anno"],
+        edta_force        = config["edta"]["force"],
+    threads: config["cpus_per_task"]
+    log:
+        "logs/edta_run_{sample}.log"
+    shell:
+        r"""
+        mkdir -p "$(dirname {output.edta_gff3})" "$(dirname {log})"
+
+        workdir=$(dirname {output.edta_gff3})
+        sample={wildcards.sample}
+        logfile="{log}"
+
+        cp {input.fasta} "${{workdir}}/"
+
+        (
+        cd "$workdir"
+
+          {params.container_bin} run \
+            --bind {params.container_binds} \
+            --env {params.container_env} \
+            {params.edta_sif} EDTA.pl \
+            --genome {wildcards.sample}.fasta \
+            --cds {wildcards.sample}_cds.fasta \
+            --exclude {wildcards.sample}.bed \
+            --species {params.edta_species} \
+            --overwrite {params.edta_overwrite} \
+            --sensitive {params.edta_sensitive} \
+            --anno {params.edta_anno} \
+            --threads {threads} \
+            --force {params.edta_force}
+
+        ) &> "$logfile"
+        """
+
+# Keeping these handy, just in case.
+#        singularity run --bind /usr/bin/which,/work,$(spack location -i ncbi-rmblastn):/rmblast \
+#        --env PATH=/usr/local/bin:$PATH {params.edta_sif} EDTA.pl \
+#        --genome ${{sample}}.fasta \
+#        --cds ${{sample}}_cds.fasta \
+#        --exclude ${{sample}}.bed \
+#        --species others --overwrite 1 --sensitive 1 --anno 1 --threads {threads} --force 1
+#        ) &> "$logfile"
+
+
+rule edta_bed:
+    input:
+        edta_gff = "results/edta/{sample}/{sample}.fasta.mod.EDTA.TEanno.gff3"
+    output:
+        "results/{sample}_edta.bed"
+    log:
+        "logs/edta_bed_final_{sample}.log"
+    shell:
+        r"""
+        mkdir -p $(dirname {output}) $(dirname {log})
+
+        awk 'BEGIN{{OFS="\t"}}
+             !/^#/ {{
+                match($9,/classification=([^;]+)/,a);
+                 class=a[1];
+                if (class=="") class="NA";
+                print $1, $4-1, $5, $3, class, $6, $7
+             }}' {input.edta_gff} > {output} 2> {log}
+        """
