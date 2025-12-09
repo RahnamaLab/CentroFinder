@@ -5,7 +5,7 @@
 # To run this on TTU HPC:
 #     spack load trf snakemake graphviz
 # sample run line:
-#     snakemake -np --config sample=Guy11_Final_S4
+#     snakemake -np
 #         OR
 #     snakemake --cores 12
 # Create DAG: snakemake --dag | dot -Tsvg > test.svg
@@ -54,17 +54,6 @@ def get_gff3(wildcards):
 def get_fastq(wildcards):
     return get_path_with_ext(wildcards, "fastq")
 
-#def get_cds(wildcards):
-#    base = get_base_dir(wildcards.sample)
-#    return f"{base}/{wildcards.sample}_cds.fasta"
-
-#def get_bedmask(wildcards):
-#    return get_path_with_ext(wildcards, "bed")
-
-#def get_edta_gff3(wildcards):
-#    base = get_base_dir(wildcards.sample)
-#    return f"{base}/{wildcards.sample}.fasta.mod.EDTA.TEanno.gff3"
-
 # Order for TRF and filename suffix
 TRF_NUMERIC_VALUES = [MATCH, MISMATCH, DELTA, PM, PI, MINSCORE, MAXPERIOD]
 
@@ -81,6 +70,7 @@ rule all:
         expand("results/{sample}_trf.bed", sample=SAMPLES_LIST),
         expand("results/{sample}_edta.bed", sample=SAMPLES_LIST)
 
+#### TRF ####
 rule run_trf:
     input:
         get_fasta
@@ -143,13 +133,13 @@ rule convert_trf_to_bed:
             --tool repeatseq &> {log}
         """
 
+##### EDTA #####
 rule edta_cds:
     input:
         fasta = get_fasta,
         gff = get_gff3
     output:
         cds = "results/edta/{sample}/{sample}_cds.fasta"
-#        cds = get_cds
     log:
         "logs/edta_cds_{sample}.log"
     shell:
@@ -164,7 +154,6 @@ rule edta_gff2bed:
         gff = get_gff3
     output:
         bed = "results/edta/{sample}/{sample}.bed"
-#        bed = get_bedmask
     log:
         "logs/edta_bed_{sample}.log"
     shell:
@@ -181,7 +170,6 @@ rule edta_run:
         bed = "results/edta/{sample}/{sample}.bed"
     output:
         edta_gff3 = "results/edta/{sample}/{sample}.fasta.mod.EDTA.TEanno.gff3"
-#        edta_gff3 = get_edta_gff3
     params:
         container_bin   = config["container"]["binary"],
         container_binds = ",".join(config["container"]["binds"]),
@@ -226,16 +214,6 @@ rule edta_run:
 
         ) &> "$logfile"
         """
-
-# Keeping these handy, just in case.
-#        singularity run --bind /usr/bin/which,/work,$(spack location -i ncbi-rmblastn):/rmblast \
-#        --env PATH=/usr/local/bin:$PATH {params.edta_sif} EDTA.pl \
-#        --genome ${{sample}}.fasta \
-#        --cds ${{sample}}_cds.fasta \
-#        --exclude ${{sample}}.bed \
-#        --species others --overwrite 1 --sensitive 1 --anno 1 --threads {threads} --force 1
-#        ) &> "$logfile"
-
 
 rule edta_bed:
     input:
