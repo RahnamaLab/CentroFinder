@@ -37,3 +37,8 @@ edta:
   sensitive: 1
   anno: 1
   force: 1
+
+# Meth Nanopore
+modbam2bed: "/work/projects/its/scolson/biology/sahar_software_pipeline/modbam2bed/modbam2bed"
+
+
