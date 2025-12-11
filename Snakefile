@@ -68,8 +68,8 @@ TRF_SUFFIX = "." + ".".join(str(num) for num in TRF_NUMERIC_VALUES) + ".dat"
 rule all:
     input:
         expand("results/{sample}/TRF/{sample}_trf.bed", sample=SAMPLES_LIST),
-        expand("results/{sample}/EDTA/{sample}_edta.bed", sample=SAMPLES_LIST)
-#        expand("results/{sample}/METHYL/{sample}_methyl.bed", sample=SAMPLES_LIST)
+        expand("results/{sample}/EDTA/{sample}_edta.bed", sample=SAMPLES_LIST),
+        expand("results/{sample}/METHYL/{sample}_methyl.bed", sample=SAMPLES_LIST)
 
 #### TRF ####
 rule run_trf:
@@ -194,9 +194,9 @@ rule edta_run:
         "results/{sample}/EDTA/logs/edta_run_{sample}.log"
     shell:
         r"""
-        mkdir -p "$(dirname {output.edta_gff3})" "$(dirname {log})"
-
         workdir="results/{wildcards.sample}/EDTA/edta"
+        mkdir -p "$(dirname {output.edta_gff3})" "$(dirname {log})" "$workdir"
+
         sample={wildcards.sample}
         logfile="{log}"
 
@@ -247,32 +247,66 @@ rule edta_bed:
         """
 
 ###### Meth Nanopore #####
-#rule mn_minimap2:
-#    input:
-#        fasta = get_fasta
-#        fastq = get_fastq
-#    output:
-#        "results/{sample}/meth_nanopore/{sample}.sam"
-#    log:
-#        "logs/{sample}/minimap2_{sample}.log"
-#    shell:
-#
-#rule mn_samtools_sort:
-#    input:
-#    output:
-#    log:
-#    shell:
-#
-#rule mn_samtools_index:
-#    input:
-#    output:
-#    log:
-#    shell:
-#
-#rule mn_modbam2bed:
-#    input:
-#    output:
-#    log:
-#    shell:
+rule mn_minimap2:
+    input:
+        fasta = get_fasta,
+        fastq = get_fastq
+    output:
+        sam = "results/{sample}/METH_NANOPORE/{sample}.sam"
+    log:
+        "results/{sample}/METH_NANOPORE/logs/minimap2_{sample}.log"
+    threads: config["cpus_per_task"]
+    shell:
+        r"""
+        mkdir -p "$(dirname {log})"
+
+        minimap2 -t {threads} -ax map-ont -Y {input.fasta} {input.fastq} > {output.sam} 2> {log}
+        """
+
+rule mn_samtools_sort:
+    input:
+        sam = "results/{sample}/METH_NANOPORE/{sample}.sam"
+    output:
+        bam = "results/{sample}/METH_NANOPORE/{sample}_sorted.bam"
+    log:
+        "results/{sample}/METH_NANOPORE/logs/mn_samtools_sort_{sample}.log"
+    shell:
+        r"""
+        mkdir -p "$(dirname {log})"
+
+        samtools sort -@ {threads} -o {output.bam} {input.sam} 2> {log}
+        """
+
+
+rule mn_samtools_index:
+    input:
+        bam = "results/{sample}/METH_NANOPORE/{sample}_sorted.bam"
+    output:
+        bai = "results/{sample}/METH_NANOPORE/{sample}_sorted.bam.bai"
+    log:
+        "results/{sample}/METH_NANOPORE/logs/mn_samtools_index_{sample}.log"
+    shell:
+        r"""
+        mkdir -p "$(dirname {log})"
+
+        samtools index index {input.bam} 2> {log}
+        """
+
+rule mn_modbam2bed:
+    input:
+        fasta = get_fasta
+        bam = "results/{sample}/METH_NANOPORE/{sample}_sorted.bam"
+    output:
+        bed = "results/{sample}/METH_NANOPORE/{sample}_methyl.bed"
+    log:
+        "results/{sample}/METH_NANOPORE/logs/mn_modbam2bed_{sample}.log"
+    params:
+        modbam2bed = config["modbam2bed"]
+    shell:
+        r"""
+        mkdir -p "$(dirname {log})"
+
+        {params.modbam2bed} {imput.fasta} {input.bam} > {output.bed} 2> {log}
+        """
 
 
