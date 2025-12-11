@@ -25,7 +25,7 @@ MAXPERIOD = config["trf_params"]["maxperiod"]
 OPTIONS   = config["trf_params"]["options"]
 
 NANOPORE_DIR = config["nanopore_dir"]
-PACBIO_DIR = config["pacbio_dir"]
+PACBIO_DIR   = config["pacbio_dir"]
 
 SAMPLES_DICT = config["samples"]
 SAMPLES_LIST = list(SAMPLES_DICT.keys())
@@ -67,18 +67,18 @@ TRF_SUFFIX = "." + ".".join(str(num) for num in TRF_NUMERIC_VALUES) + ".dat"
 
 rule all:
     input:
-        expand("results/{sample}_trf.bed", sample=SAMPLES_LIST),
-        expand("results/{sample}_edta.bed", sample=SAMPLES_LIST)
-        expand("results/{sample}_methyl.bed", sample=SAMPLES_LIST)
+        expand("results/{sample}/TRF/{sample}_trf.bed", sample=SAMPLES_LIST),
+        expand("results/{sample}/EDTA/{sample}_edta.bed", sample=SAMPLES_LIST)
+#        expand("results/{sample}/METHYL/{sample}_methyl.bed", sample=SAMPLES_LIST)
 
 #### TRF ####
 rule run_trf:
     input:
         get_fasta
     output:
-        "results/{sample}.fasta" + TRF_SUFFIX
+        "results/{sample}/TRF/{sample}.fasta" + TRF_SUFFIX
     log:
-        "logs/run_trf_{sample}.log"
+        "results/{sample}/TRF/logs/run_trf_{sample}.log"
     run:
         # Ensure directories exist
         os.makedirs(os.path.dirname(output[0]), exist_ok=True)
@@ -126,11 +126,11 @@ rule run_trf:
 
 rule convert_trf_to_bed:
     input:
-        "results/{sample}.fasta" + TRF_SUFFIX
+        "results/{sample}/TRF/{sample}.fasta" + TRF_SUFFIX
     output:
-        "results/{sample}_trf.bed"
+        "results/{sample}/TRF/{sample}_trf.bed"
     log:
-        "logs/convert_trf_to_bed_{sample}.log"
+        "results/{sample}/TRF/logs/convert_trf_to_bed_{sample}.log"
     shell:
         r"""
         mkdir -p $(dirname {output}) $(dirname {log})
@@ -144,11 +144,11 @@ rule convert_trf_to_bed:
 rule edta_cds:
     input:
         fasta = get_fasta,
-        gff = get_gff3
+        gff   = get_gff3
     output:
-        cds = "results/edta/{sample}/{sample}_cds.fasta"
+        cds = "results/{sample}/EDTA/{sample}_cds.fasta"
     log:
-        "logs/edta_cds_{sample}.log"
+        "results/{sample}/EDTA/logs/edta_cds_{sample}.log"
     shell:
         r"""
         mkdir -p $(dirname {output.cds}) $(dirname {log})
@@ -160,9 +160,9 @@ rule edta_gff2bed:
     input:
         gff = get_gff3
     output:
-        bed = "results/edta/{sample}/{sample}.bed"
+        bed = "results/{sample}/EDTA/{sample}.bed"
     log:
-        "logs/edta_bed_{sample}.log"
+        "results/{sample}/EDTA/logs/edta_bed_{sample}.log"
     shell:
         r"""
         mkdir -p $(dirname {output.bed}) $(dirname {log})
@@ -173,10 +173,10 @@ rule edta_gff2bed:
 rule edta_run:
     input:
         fasta = get_fasta,
-        cds = "results/edta/{sample}/{sample}_cds.fasta",
-        bed = "results/edta/{sample}/{sample}.bed"
+        cds = "results/{sample}/EDTA/{sample}_cds.fasta",
+        bed = "results/{sample}/EDTA/{sample}.bed"
     output:
-        edta_gff3 = "results/edta/{sample}/{sample}.fasta.mod.EDTA.TEanno.gff3"
+        edta_gff3 = "results/{sample}/EDTA/{sample}.fasta.mod.EDTA.TEanno.gff3"
     params:
         container_bin   = config["container"]["binary"],
         container_binds = ",".join(config["container"]["binds"]),
@@ -191,16 +191,18 @@ rule edta_run:
         edta_force        = config["edta"]["force"],
     threads: config["cpus_per_task"]
     log:
-        "logs/edta_run_{sample}.log"
+        "results/{sample}/EDTA/logs/edta_run_{sample}.log"
     shell:
         r"""
         mkdir -p "$(dirname {output.edta_gff3})" "$(dirname {log})"
 
-        workdir=$(dirname {output.edta_gff3})
+        workdir="results/{wildcards.sample}/EDTA/edta"
         sample={wildcards.sample}
         logfile="{log}"
 
-        cp {input.fasta} "${{workdir}}/"
+        cp {input.fasta} "$workdir/{wildcards.sample}.fasta"
+        cp {input.cds}   "$workdir/{wildcards.sample}_cds.fasta"
+        cp {input.bed}   "$workdir/{wildcards.sample}.bed"
 
         (
         cd "$workdir"
@@ -220,15 +222,17 @@ rule edta_run:
             --force {params.edta_force}
 
         ) &> "$logfile"
+
+        cp "$workdir/{wildcards.sample}.fasta.mod.EDTA.TEanno.gff3" {output.edta_gff3}
         """
 
 rule edta_bed:
     input:
-        edta_gff = "results/edta/{sample}/{sample}.fasta.mod.EDTA.TEanno.gff3"
+        edta_gff = "results/{sample}/EDTA/{sample}.fasta.mod.EDTA.TEanno.gff3"
     output:
-        "results/{sample}_edta.bed"
+        "results/{sample}/EDTA/{sample}_edta.bed"
     log:
-        "logs/edta_bed_final_{sample}.log"
+        "results/{sample}/EDTA/logs/edta_bed_final_{sample}.log"
     shell:
         r"""
         mkdir -p $(dirname {output}) $(dirname {log})
@@ -242,33 +246,33 @@ rule edta_bed:
              }}' {input.edta_gff} > {output} 2> {log}
         """
 
-##### Meth Nanopore #####
-rule mn_minimap2:
-    input:
-        fasta = get_fasta
-        fastq = get_fastq
-    output:
-        "results/{sample}/meth_nanopore/{sample}.sam"
-    log:
-        "logs/{sample}/minimap2_{sample}.log"
-    shell:
-
-rule mn_samtools_sort:
-    input:
-    output:
-    log:
-    shell:
-
-rule mn_samtools_index:
-    input:
-    output:
-    log:
-    shell:
-
-rule mn_modbam2bed:
-    input:
-    output:
-    log:
-    shell:
+###### Meth Nanopore #####
+#rule mn_minimap2:
+#    input:
+#        fasta = get_fasta
+#        fastq = get_fastq
+#    output:
+#        "results/{sample}/meth_nanopore/{sample}.sam"
+#    log:
+#        "logs/{sample}/minimap2_{sample}.log"
+#    shell:
+#
+#rule mn_samtools_sort:
+#    input:
+#    output:
+#    log:
+#    shell:
+#
+#rule mn_samtools_index:
+#    input:
+#    output:
+#    log:
+#    shell:
+#
+#rule mn_modbam2bed:
+#    input:
+#    output:
+#    log:
+#    shell:
 
 
