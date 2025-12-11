@@ -306,7 +306,7 @@ rule mn_modbam2bed:
         r"""
         mkdir -p "$(dirname {log})"
 
-        {params.modbam2bed} {imput.fasta} {input.bam} > {output.bed} 2> {log}
+        {params.modbam2bed} {input.fasta} {input.bam} > {output.bed} 2> {log}
         """
 
 
