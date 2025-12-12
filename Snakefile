@@ -69,7 +69,7 @@ rule all:
     input:
         expand("results/{sample}/TRF/{sample}_trf.bed", sample=SAMPLES_LIST),
         expand("results/{sample}/EDTA/{sample}_edta.bed", sample=SAMPLES_LIST),
-        expand("results/{sample}/METHYL/{sample}_methyl.bed", sample=SAMPLES_LIST)
+        expand("results/{sample}/METH_NANOPORE/{sample}_methyl.bed", sample=SAMPLES_LIST)
 
 #### TRF ####
 rule run_trf:
@@ -289,13 +289,14 @@ rule mn_samtools_index:
         r"""
         mkdir -p "$(dirname {log})"
 
-        samtools index index {input.bam} 2> {log}
+        samtools index {input.bam} 2> {log}
         """
 
 rule mn_modbam2bed:
     input:
         fasta = get_fasta,
-        bam = "results/{sample}/METH_NANOPORE/{sample}_sorted.bam"
+        bam   = "results/{sample}/METH_NANOPORE/{sample}_sorted.bam",
+        bai   = "results/{sample}/METH_NANOPORE/{sample}_sorted.bam.bai"
     output:
         bed = "results/{sample}/METH_NANOPORE/{sample}_methyl.bed"
     log:
