@@ -82,7 +82,6 @@ rule all:
         expand("results/{sample}/METH_NANOPORE/{sample}_methyl.bed", sample=SAMPLES_LIST),
         expand("results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods.modbam.freq.aggregate.all.bed", sample=SAMPLES_LIST),
         # Centromere Scoring Notes
-#        expand("results/{sample}/CENTROMERE_SCORING/{sample}.fasta.fai", sample=SAMPLES_LIST)
         expand("results/{sample}/CENTROMERE_SCORING/windows.{sample}.{window}bp.bed", sample=SAMPLES_LIST, window=WINDOW),
         expand("results/{sample}/CENTROMERE_SCORING/{sample}.trf.sorted.bed", sample=SAMPLES_LIST),
         expand("results/{sample}/CENTROMERE_SCORING/{sample}.te.sorted.bed", sample=SAMPLES_LIST),
@@ -469,7 +468,6 @@ rule centromere_scoring_make_windows:
 
 rule centromere_scoring_trf2bed_sort:
     input:
-#        bed = rules.centromere_scoring_make_windows.output.bed,
         trf_bed = rules.convert_trf_to_bed.output
     output:
         sorted_bed = "results/{sample}/CENTROMERE_SCORING/{sample}.trf.sorted.bed"
@@ -506,19 +504,16 @@ rule centromere_scoring_sort_TE:
 
 rule centromere_scoring_sort_methylation:
     input:
- #       fai = rules.centromere_scoring_index_fai.output.fai
         methyl=lambda wildcard: (
             rules.mn_modbam2bed.output.bed
             if is_nanopore(wildcard.sample)
             else rules.ccsmeth_call_freqb.output
         )
-#        methyl = rules.mn_modbam2bed.output.bed
     output:
         bedgraph = "results/{sample}/CENTROMERE_SCORING/{sample}.methylation.sorted.bedgraph"
     log:
         "results/{sample}/CENTROMERE_SCORING/logs/sorted_methylation_{sample}.log"
     params:
-#        window = config["window"],
         do_sort = lambda wildcard: "true" if is_nanopore(wildcard.sample) else "false"
     shell:
         r"""
