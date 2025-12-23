@@ -88,6 +88,7 @@ rule all:
         expand("results/{sample}/CENTROMERE_SCORING/{sample}.methylation.sorted.bedgraph", sample=SAMPLES_LIST),
         expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.trf_counts.bed", sample=SAMPLES_LIST, window=WINDOW),
         expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.te_counts.bed", sample=SAMPLES_LIST, window=WINDOW),
+        expand("results/{sample}/CENTROMERE_SCORING/{sample}.genes.bed", sample=SAMPLES_LIST),
 
 #### TRF ####
 rule run_trf:
@@ -566,4 +567,18 @@ rule centromere_scoring_TE_coverage:
         mkdir -p "$(dirname {log})"
 
         bedtools coverage -a {input.bed} -b {input.te_bed} -counts > {output.tmp_bed} &> {log}
+        """
+
+rule centromere_scoring_gene_counts:
+    input:
+        gff3 = get_gff3
+    output:
+        genes_bed = "results/{sample}/CENTROMERE_SCORING/{sample}.genes.bed"
+    log:
+        "results/{sample}/CENTROMERE_SCORING/logs/{sample}.genes.bed.log"
+    shell:
+        r"""
+        mkdir -p "$(dirname {log})"
+
+        awk '$3=="gene" {{print $1"\t"($4-1)"\t"$5"\t"$9}}' {input.gff3} > {output.genes_bed} &> {log}
         """
