@@ -83,7 +83,8 @@ rule all:
         expand("results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods.modbam.freq.aggregate.all.bed", sample=SAMPLES_LIST),
         # Centromere Scoring Notes
 #        expand("results/{sample}/CENTROMERE_SCORING/{sample}.fasta.fai", sample=SAMPLES_LIST)
-        expand("results/{sample}/CENTROMERE_SCORING/windows.{sample}.{window}bp.bed", sample=SAMPLES_LIST, window=WINDOW)
+        expand("results/{sample}/CENTROMERE_SCORING/windows.{sample}.{window}bp.bed", sample=SAMPLES_LIST, window=WINDOW),
+        expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.trf.sorted.bed", sample=SAMPLES_LIST, window=WINDOW),
 
 #### TRF ####
 rule run_trf:
@@ -249,7 +250,7 @@ rule edta_bed:
         "results/{sample}/EDTA/logs/edta_bed_final_{sample}.log"
     shell:
         r"""
-        mkdir -p $(dirname {output}) $(dirname {log})
+        mkdir -p $(dirname {log})
 
         awk 'BEGIN{{OFS="\t"}}
              !/^#/ {{
@@ -448,13 +449,13 @@ rule centromere_scoring_make_windows:
     output:
         bed = "results/{sample}/CENTROMERE_SCORING/windows.{sample}.{window}bp.bed"
     log:
-        "results/{sample}/CENTROMERE_SCORING/{sample}_window_{window}.log"
+        "results/{sample}/CENTROMERE_SCORING/logs/{sample}_window_{window}.log"
     params:
         window = config["window"],
         do_sort = lambda wildcard: "true" if is_nanopore(wildcard.sample) else "false"
     shell:
         r"""
-        mkdir -p "$(dirname {output.bed}) "$(dirname {log})""
+        mkdir -p "$(dirname {log})"
 
         if [ "{params.do_sort}" = "true" ]; then
             bedtools makewindows -g {input.fai} -w {params.window} \
@@ -463,3 +464,27 @@ rule centromere_scoring_make_windows:
             bedtools makewindows -g {input.fai} -w {params.window} > {output.bed} &> {log}
         fi
         """
+
+rule centromere_scoring_trf2bed_sort:
+    input:
+        bed = rules.centromere_scoring_make_windows.output.bed,
+        trf_bed = rules.convert_trf_to_bed.output
+    output:
+        sorted_bed = "results/{sample}/CENTROMERE_SCORING/{sample}.{window}.trf.sorted.bed"
+    log:
+        "results/{sample}/CENTROMERE_SCORING/logs/trf2bed_sort_{sample}.{window}.log"
+    shell:
+        r"""
+        mkdir -p "$(dirname {log})"
+
+        awk -F'\t' '{{
+        split($1, coords, ":");
+        chrom = coords[1];
+        split(coords[2], range, "-");
+        start = range[1] - 1;
+        end = range[2];
+        motif = $2;
+        print chrom, start, end, motif;
+        }}' OFS="\t" {input.trf_bed} | sort -k1,1V -k2,2n > {output.sorted_bed} &> {log}
+        """
+
