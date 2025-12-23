@@ -86,7 +86,7 @@ rule all:
         expand("results/{sample}/CENTROMERE_SCORING/{sample}.trf.sorted.bed", sample=SAMPLES_LIST),
         expand("results/{sample}/CENTROMERE_SCORING/{sample}.te.sorted.bed", sample=SAMPLES_LIST),
         expand("results/{sample}/CENTROMERE_SCORING/{sample}.methylation.sorted.bedgraph", sample=SAMPLES_LIST),
-        expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.trf_counts.bed", sample=SAMPLES_LIST),
+        expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.trf_counts.bed", sample=SAMPLES_LIST, window=WINDOW),
 
 #### TRF ####
 rule run_trf:
@@ -540,9 +540,9 @@ rule centromere_scoring_TRF_coverage:
     output:
         tmp_bed = "results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.trf_counts.bed"
     log:
-        "results/{sample}/CENTROMERE_SCORING/logs/TRF_coverage_{sample}.log"
+        "results/{sample}/CENTROMERE_SCORING/logs/TRF_coverage_{sample}.{window}.log"
     params:
-        window = config["window"],
+        window = config["window"]
     shell:
         r"""
         mkdir -p "$(dirname {log})"
