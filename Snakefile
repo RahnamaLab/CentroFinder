@@ -84,8 +84,9 @@ rule all:
         # Centromere Scoring Notes
 #        expand("results/{sample}/CENTROMERE_SCORING/{sample}.fasta.fai", sample=SAMPLES_LIST)
         expand("results/{sample}/CENTROMERE_SCORING/windows.{sample}.{window}bp.bed", sample=SAMPLES_LIST, window=WINDOW),
-        expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.trf.sorted.bed", sample=SAMPLES_LIST, window=WINDOW),
-        expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.te.sorted.bed", sample=SAMPLES_LIST, window=WINDOW),
+        expand("results/{sample}/CENTROMERE_SCORING/{sample}.trf.sorted.bed", sample=SAMPLES_LIST),
+        expand("results/{sample}/CENTROMERE_SCORING/{sample}.te.sorted.bed", sample=SAMPLES_LIST),
+        expand("results/{sample}/CENTROMERE_SCORING/{sample}.methylation.sorted.bedgraph", sample=SAMPLES_LIST)
 
 #### TRF ####
 rule run_trf:
@@ -503,43 +504,21 @@ rule centromere_scoring_sort_TE:
         sort -k1,1V -k2,2n {input.edta} > {output.sorted_bed} &> {log}
         """
 
-rule centromere_scoring_sort_methylation_nanopore:
+rule centromere_scoring_sort_methylation:
     input:
  #       fai = rules.centromere_scoring_index_fai.output.fai
-        methyl = rules.mn_modbam2bed.output.bed
-   output:
+        methyl=lambda wildcard: (
+            rules.mn_modbam2bed.output.bed
+            if is_nanopore(wildcard.sample)
+            else rules.ccsmeth_call_freqb.output
+        )
+#        methyl = rules.mn_modbam2bed.output.bed
+    output:
         bedgraph = "results/{sample}/CENTROMERE_SCORING/{sample}.methylation.sorted.bedgraph"
     log:
         "results/{sample}/CENTROMERE_SCORING/logs/sorted_methylation_{sample}.log"
     params:
 #        window = config["window"],
-#        do_sort = lambda wildcard: "true" if is_nanopore(wildcard.sample) else "false"
-    shell:
-        r"""
-        mkdir -p "$(dirname {log})"
-
-        if [ "{params.do_sort}" = "true" ]; then
-            awk 'BEGIN{{OFS="\t"}} !/^#/ && $5!="nan" && $5!="NA" && $5!="" {{
-                val=$5
-                if (val < 0.0001 && val > -0.0001) next
-                if (val <= 1) val = val * 100
-                print $1, $2, $3, val
-            }}' {input.methyl} | sort -k1,1 -k2,2n > {output.bedgraph} &> {log}
-        else
-            awk 'BEGIN{{OFS="\t"}} {{print $1,$2,$3,$11}}' {input.methyl} \
-                | sort -k1,1V -k2,2n > {output.bedgraph} &> {log}
-        fi
-        """
-rule centromere_scoring_sort_methylation:
-    input:
- #       fai = rules.centromere_scoring_index_fai.output.fai
-        methyl = rules.mn_modbam2bed.output.bed
-   output:
-        bedgraph = "results/{sample}/CENTROMERE_SCORING/{sample}.{window}.methylation.sorted.bedgraph"
-    log:
-        "results/{sample}/CENTROMERE_SCORING/logs/sorted_methylation_{sample}.{window}.log"
-    params:
-        window = config["window"],
         do_sort = lambda wildcard: "true" if is_nanopore(wildcard.sample) else "false"
     shell:
         r"""
