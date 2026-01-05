@@ -10,8 +10,8 @@
 #     snakemake --cores 12
 #         OR
 #     snakemake --use-conda --cores 12 results/Fo4287v4/METH_PACBIO/Fo4287v4.hifi.pbmm2.bam
-#     snakemake --use-conda --conda-frontend conda --cores 12 results/Fo4287v4/CENTROMERE_SCORING/Fo4287v4.1000.tmp.gc_content.bed
-#     snakemake --use-conda --conda-frontend conda --cores 12 results/Guy11_chr1/CENTROMERE_SCORING/Guy11_chr1.1000.tmp.gc_content.bed
+#     snakemake --use-conda --conda-frontend conda --cores 12 results/Fo4287v4/CENTROMERE_SCORING/Fo4287v4.1000.windows.features.tsv
+#     snakemake --use-conda --conda-frontend conda --cores 12 results/Guy11_chr1/CENTROMERE_SCORING/Guy11_chr1.1000.windows.features.tsv
 # Create DAG: snakemake --dag results/Guy11_chr1/CENTROMERE_SCORING/Guy11_chr1.1000.te.sorted.bed | dot -Tsvg > centromere_pipeline_Guy11_chr1.svg
 
 import os
@@ -96,6 +96,7 @@ rule all:
         expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.hifi_cov_mean.bed", sample=SAMPLES_LIST, window=WINDOW),
         expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.meth_mean.bed", sample=SAMPLES_LIST, window=WINDOW),
         expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.gc_content.bed", sample=SAMPLES_LIST, window=WINDOW),
+        expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.windows.features.tsv", sample=SAMPLES_LIST, window=WINDOW),
 
 #### TRF ####
 rule run_trf:
@@ -679,6 +680,36 @@ rule centromere_scoring_calculate_gc_content_per_window:
         mkdir -p "$(dirname {log})"
 
         bedtools nuc -fi {input.fasta} -bed {input.window} | awk 'NR>1 {{print $1"\t"$2"\t"$3"\t"$5}}' > {output.bed} &> {log}
+        """
+
+rule centromere_scoring_combine_features:
+    input:
+        windows = rules.centromere_scoring_make_windows.output.bed,
+        trf     = rules.centromere_scoring_TRF_coverage.output.tmp_bed,
+        te      = rules.centromere_scoring_TE_coverage.output.tmp_bed,
+        gene    = rules.centromere_scoring_gene_counts_bedtools_coverage.output.genes_bed,
+        hifi    = rules.centromere_scoring_hifi_coverage_bedtools_map.output.bed,
+        meth    = rules.centromere_scoring_mean_methylation_per_window.output.bed,
+        gc      = rules.centromere_scoring_calculate_gc_content_per_window.output.bed
+    output:
+        tsv = "results/{sample}/CENTROMERE_SCORING/{sample}.{window}.windows.features.tsv"
+    log:
+        "results/{sample}/CENTROMERE_SCORING/logs/combine_features_{sample}.{window}.log"
+    shell:
+        r"""
+        mkdir -p "$(dirname {log})"
+
+        echo -e "chrom\tstart\tend\ttrf_cov\tte_cov\tgene_count\thifi_cov_mean\tmeth_mean\tgc_content" > {output.tsv} &> {log}
+
+        paste \
+            <(cut -f1-3 {input.windows}) \
+            <(cut -f4 {input.trf}) \
+            <(cut -f4 {input.te}) \
+            <(cut -f4 {input.gene}) \
+            <(cut -f4 {input.hifi}) \
+            <(cut -f4 {input.meth}) \
+            <(cut -f4 {input.gc}) \
+            >> {output.tsv} &>> {log}
         """
 
 
