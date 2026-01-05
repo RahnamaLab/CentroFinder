@@ -1,8 +1,8 @@
 # Created By: Sharon Colson
 # Creation Date: 12/01/2025
-# Last Modified: 12/09/2025
+# Last Modified: 01/05/2026
 
-# To run this on TTU HPC:
+# To run this on TN Tech Univ HPC:
 #     spack load trf snakemake graphviz
 # sample run line:
 #     snakemake -np
@@ -10,8 +10,8 @@
 #     snakemake --cores 12
 #         OR
 #     snakemake --use-conda --cores 12 results/Fo4287v4/METH_PACBIO/Fo4287v4.hifi.pbmm2.bam
-#     snakemake --use-conda --conda-frontend conda --cores 12 results/Fo4287v4/CENTROMERE_SCORING/Fo4287v4.1000.tmp.hifi_cov_mean.bed
-#     snakemake --use-conda --conda-frontend conda --cores 12 results/Guy11_chr1/CENTROMERE_SCORING/Guy11_chr1.1000.tmp.hifi_cov_mean.bed
+#     snakemake --use-conda --conda-frontend conda --cores 12 results/Fo4287v4/CENTROMERE_SCORING/Fo4287v4.1000.tmp.meth_mean.bed
+#     snakemake --use-conda --conda-frontend conda --cores 12 results/Guy11_chr1/CENTROMERE_SCORING/Guy11_chr1.1000.tmp.meth_mean.bed
 # Create DAG: snakemake --dag results/Guy11_chr1/CENTROMERE_SCORING/Guy11_chr1.1000.te.sorted.bed | dot -Tsvg > centromere_pipeline_Guy11_chr1.svg
 
 import os
@@ -94,6 +94,7 @@ rule all:
         expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.gene_counts.bed", sample=SAMPLES_LIST, window=WINDOW),
         expand("results/{sample}/CENTROMERE_SCORING/{sample}.hifi.depth.bed", sample=SAMPLES_LIST),
         expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.hifi_cov_mean.bed", sample=SAMPLES_LIST, window=WINDOW),
+        expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.meth_mean.bed", sample=SAMPLES_LIST, window=WINDOW),
 
 #### TRF ####
 rule run_trf:
@@ -641,4 +642,25 @@ rule centromere_scoring_hifi_coverage_bedtools_map:
         mkdir -p "$(dirname {log})"
 
         bedtools map -a {input.window} -b {input.bed} -c 4 -o mean -null 0 > {output.bed} &> {log}
+        """
+
+rule centromere_scoring_mean_methylation_per_window:
+    input:
+        window = rules.centromere_scoring_make_windows.output.bed,
+        bedgraph = rules.centromere_scoring_sort_methylation.output.bedgraph
+    output:
+        bed = "results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.meth_mean.bed"
+    log:
+        "results/{sample}/CENTROMERE_SCORING/logs/mean_methylation_per_window_{sample}_{window}.log"
+    params:
+        do_sort = lambda wildcard: "true" if is_nanopore(wildcard.sample) else "false"
+    shell:
+        r"""
+        mkdir -p "$(dirname {log})"
+
+        if [ "{params.do_sort}" = "true" ]; then
+            bedtools map -a {input.window} -b {input.bedgraph} -c 4 -o mean -null 0 > {output.bed} &> {log}
+        else
+            bedtools map -nonamecheck -a {input.window} -b {input.bedgraph} -c 4 -o mean -null 0 > {output.bed} &> {log}
+        fi
         """
