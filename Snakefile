@@ -10,8 +10,8 @@
 #     snakemake --cores 12
 #         OR
 #     snakemake --use-conda --cores 12 results/Fo4287v4/METH_PACBIO/Fo4287v4.hifi.pbmm2.bam
-#     snakemake --use-conda --conda-frontend conda --cores 12 results/Fo4287v4/CENTROMERE_SCORING/Fo4287v4.hifi.depth.bed
-#     snakemake --use-conda --conda-frontend conda --cores 12 results/Guy11_chr1/CENTROMERE_SCORING/Guy11_chr1.hifi.depth.bed
+#     snakemake --use-conda --conda-frontend conda --cores 12 results/Fo4287v4/CENTROMERE_SCORING/Fo4287v4.1000.tmp.hifi_cov_mean.bed
+#     snakemake --use-conda --conda-frontend conda --cores 12 results/Guy11_chr1/CENTROMERE_SCORING/Guy11_chr1.1000.tmp.hifi_cov_mean.bed
 # Create DAG: snakemake --dag results/Guy11_chr1/CENTROMERE_SCORING/Guy11_chr1.1000.te.sorted.bed | dot -Tsvg > centromere_pipeline_Guy11_chr1.svg
 
 import os
@@ -93,6 +93,7 @@ rule all:
         expand("results/{sample}/CENTROMERE_SCORING/{sample}.genes.bed", sample=SAMPLES_LIST),
         expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.gene_counts.bed", sample=SAMPLES_LIST, window=WINDOW),
         expand("results/{sample}/CENTROMERE_SCORING/{sample}.hifi.depth.bed", sample=SAMPLES_LIST),
+        expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.hifi_cov_mean.bed", sample=SAMPLES_LIST, window=WINDOW),
 
 #### TRF ####
 rule run_trf:
@@ -625,4 +626,19 @@ rule centromere_scoring_hifi_coverage:
         else
             samtools depth -a {input.hifi} | awk '{{print $1"\t"$2-1"\t"$2"\t"$3}}' > {output.bed} &> {log}
         fi
+        """
+
+rule centromere_scoring_hifi_coverage_bedtools_map:
+    input:
+        window = rules.centromere_scoring_make_windows.output.bed,
+        bed = rules.centromere_scoring_hifi_coverage.output.bed
+    output:
+        bed = "results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.hifi_cov_mean.bed"
+    log:
+        "results/{sample}/CENTROMERE_SCORING/logs/hifi_coverage_bedtools_map_{sample}_{window}.log"
+    shell:
+        r"""
+        mkdir -p "$(dirname {log})"
+
+        bedtools map -a {input.window} -b {input.bed} -c 4 -o mean -null 0 > {output.bed} &> {log}
         """
