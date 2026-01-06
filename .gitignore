@@ -10,3 +10,4 @@ spack_load.txt
 todo.txt
 run.sh
 slurm-*.out
+run_centromer_detection.sh
