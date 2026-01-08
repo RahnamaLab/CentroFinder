@@ -1,10 +1,9 @@
 samples:
-    Guy11:
-        platform: nanopore
-    Guy11_chr1:
-        platform: nanopore
-    Fo4287v4:
-        platform: pacbio
+    nanopore:
+        Guy11:
+        Guy11_chr1:
+    pacbio:
+        Fo4287v4:
 
 nanopore_dir: data/nanopore
 pacbio_dir: data/pacbio

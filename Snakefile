@@ -31,16 +31,25 @@ OPTIONS   = config["trf_params"]["options"]
 NANOPORE_DIR = config["nanopore_dir"]
 PACBIO_DIR   = config["pacbio_dir"]
 
-SAMPLES_DICT = config["samples"]
-SAMPLES_LIST = list(SAMPLES_DICT.keys())
+SAMPLES_BY_PLATFORM = config["samples"]
+
+NANOPORE_SAMPLES = list(SAMPLES_BY_PLATFORM.get("nanopore", {}).keys())
+PACBIO_SAMPLES = list(SAMPLES_BY_PLATFORM.get("pacbio", {}).keys())
+
+SAMPLES_LIST = NANOPORE_SAMPLES + PACBIO_SAMPLES
 
 WINDOW = config["window"]
 
+def is_nanopore(sample):
+    return sample in NANOPORE_SAMPLES
+
+def is_pacbio(sample):
+    return sample in PACBIO_SAMPLES
+
 def get_base_dir(sample):
-    platform = SAMPLES_DICT[sample]["platform"].lower()
-    if platform == "nanopore":
+    if sample in NANOPORE_SAMPLES:
         return NANOPORE_DIR
-    elif platform == "pacbio":
+    elif sample in PACBIO_SAMPLES:
         return PACBIO_DIR
     else:
         raise ValueError(f"Unknown platform: '{platform}' for sample: '{sample}'. "
@@ -66,9 +75,6 @@ def get_fastq(wildcards):
 def get_bam(wildcards):
     return get_path_with_ext(wildcards, "subreads.bam")
 
-def is_nanopore(sample):
-    return SAMPLES_DICT[sample]["platform"].lower() == "nanopore"
-
 # Order for TRF and filename suffix
 TRF_NUMERIC_VALUES = [MATCH, MISMATCH, DELTA, PM, PI, MINSCORE, MAXPERIOD]
 
@@ -82,27 +88,11 @@ TRF_SUFFIX = "." + ".".join(str(num) for num in TRF_NUMERIC_VALUES) + ".dat"
 
 rule all:
     input:
-        expand("results/{sample}/TRF/{sample}_trf.bed", sample=SAMPLES_LIST),
-        expand("results/{sample}/EDTA/{sample}_edta.bed", sample=SAMPLES_LIST),
-        expand("results/{sample}/METH_NANOPORE/{sample}_methyl.bed", sample=SAMPLES_LIST),
-        expand("results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods.modbam.freq.aggregate.all.bed", sample=SAMPLES_LIST),
-        # Centromere Scoring Notes
-        expand("results/{sample}/CENTROMERE_SCORING/{sample}.windows.{window}bp.bed", sample=SAMPLES_LIST, window=WINDOW),
-        expand("results/{sample}/CENTROMERE_SCORING/{sample}.trf.sorted.bed", sample=SAMPLES_LIST),
-        expand("results/{sample}/CENTROMERE_SCORING/{sample}.te.sorted.bed", sample=SAMPLES_LIST),
-        expand("results/{sample}/CENTROMERE_SCORING/{sample}.methylation.sorted.bedgraph", sample=SAMPLES_LIST),
-        expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.trf_counts.bed", sample=SAMPLES_LIST, window=WINDOW),
-        expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.te_counts.bed", sample=SAMPLES_LIST, window=WINDOW),
-        expand("results/{sample}/CENTROMERE_SCORING/{sample}.genes.bed", sample=SAMPLES_LIST),
-        expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.gene_counts.bed", sample=SAMPLES_LIST, window=WINDOW),
-        expand("results/{sample}/CENTROMERE_SCORING/{sample}.hifi.depth.bed", sample=SAMPLES_LIST),
-        expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.hifi_cov_mean.bed", sample=SAMPLES_LIST, window=WINDOW),
-        expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.meth_mean.bed", sample=SAMPLES_LIST, window=WINDOW),
-        expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.gc_content.bed", sample=SAMPLES_LIST, window=WINDOW),
-        expand("results/{sample}/CENTROMERE_SCORING/{sample}.{window}.windows.features.tsv", sample=SAMPLES_LIST, window=WINDOW),
         expand("results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_windows_ranked.tsv", sample=SAMPLES_LIST, window=WINDOW),
         expand("results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_best_windows_marked.tsv", sample=SAMPLES_LIST, window=WINDOW),
         expand("results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_candidates.bed", sample=SAMPLES_LIST, window=WINDOW),
+        expand("results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_candidates_ranked.tsv", sample=SAMPLES_LIST, window=WINDOW),
+        expand("results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_best_candidates.bed", sample=SAMPLES_LIST, window=WINDOW),
 
 #### TRF ####
 rule run_trf:
@@ -726,9 +716,12 @@ rule centromere_scoring_python:
         features = rules.centromere_scoring_combine_features.output.tsv,
         fai = rules.centromere_scoring_index_fai.output.fai
     output:
-        ranked = "results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_windows_ranked.tsv",
-        best   = "results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_best_windows_marked.tsv",
-        bed    = "results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_candidates.bed"
+        windows_ranked_tsv = "results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_windows_ranked.tsv",
+        best_windows_tsv   = "results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_best_windows_marked.tsv",
+        candidates_bed    = "results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_candidates.bed",
+        candidates_ranked_tsv = "results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_candidates_ranked.tsv",
+        best_candidates_bed = "results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_best_candidates.bed"
+
     log:
         "results/{sample}/CENTROMERE_SCORING/{sample}_{window}/logs/centromere_scoring_final_{sample}.log"
     params:
