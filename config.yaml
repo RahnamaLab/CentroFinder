@@ -11,6 +11,9 @@ pacbio_dir: data/pacbio
 cpus_per_task: 12
 
 # Centromere Scoring
+gc: 1.0
+exclusion_bp_large: 100000
+exclusion_bp_min: 10000
 window: 1000
     
 # Specific to TRF steps 
