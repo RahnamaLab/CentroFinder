@@ -38,10 +38,10 @@ make modbam2bed
 ./modbam2bed
 ```
 
-The final software requirement is for the edta singularity container. #####FIXME: I need to know from Sahar if she recalls where this container came from. If she doesn't, I may need to go digging to try and verify which container we pulled it from. ####
-
-
-
+The final software requirement is for the [edta](https://github.com/oushujun/EDTA) singularity container. This was installed using the [singularity instructions](https://github.com/oushujun/EDTA#install-with-singularity-good-for-hpc-users), specifically:
+```
+singularity build edta.sif docker://quay.io/biocontainers/edta:2.2.2--hdfd78af_1
+```
 ## Setting up the file structure
 
 The file structure for storing the original data files is as follows:
