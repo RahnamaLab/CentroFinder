@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 import os, sys, numpy as np, pandas as pd, matplotlib.pyplot as plt, argparse
 
-GC=1.0
+DEFAULT_GC=1.0
 # Standard large exclusion zone (for long chromosomes)
-EXCLUSION_BP_LARGE = 100000
+DEFAULT_EXCLUSION_BP_LARGE = 100000
 # Minimal exclusion zone (for very short scaffolds, e.g., 100 kbp)
-EXCLUSION_BP_MIN = 10000
-WINDOW = 1000
+DEFAULT_EXCLUSION_BP_MIN = 10000
+DEFAULT_WINDOW = 1000
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -34,28 +34,28 @@ def parse_args():
     parser.add_argument(
     "--gc",
     type=float,
-    default=GC,
+    default=DEFAULT_GC,
     help="Weight for GC feature in the scoring model (default: %(default)s.",
     )
 
     parser.add_argument(
     "--exclusion-bp-large",
     type=int,
-    default=EXCLUSION_BP_LARGE,
+    default=DEFAULT_EXCLUSION_BP_LARGE,
     help="Large exclusion zone in bp for long chromosomes (default: %(default)s).",
     )
 
     parser.add_argument(
     "--exclusion-bp-min",
     type=int,
-    default=EXCLUSION_BP_MIN,
+    default=DEFAULT_EXCLUSION_BP_MIN,
     help="Minimum exclusion zone in bp for short scaffolds (default: %(default)s).",
     )
 
     parser.add_argument(
     "--window",
     type=int,
-    default=WINDOW,
+    default=DEFAULT_WINDOW,
     help="Window size in bp (default: %(default)s).",
     )
 
@@ -98,6 +98,11 @@ def main():
     os.makedirs(outdir, exist_ok=True)
 
     out_prefix = os.path.join(outdir, "centro")
+
+    gc = args.gc
+    exclusion_bp_large = args.exclusion_bp_large
+    exclusion_bp_min = args.exclusion_bp_min
+    window = args.window
 
 #    fn = "windows.features.tsv"
 #    out_prefix = "centro"
@@ -149,10 +154,10 @@ def main():
             continue
 
         chr_len = chr_lengths[chrom]
-        if chr_len <= EXCLUSION_BP_LARGE * 2:
-            current_exclusion_bp = EXCLUSION_BP_MIN
+        if chr_len <= exclusion_bp_large * 2:
+            current_exclusion_bp = exclusion_bp_min
         else:
-            current_exclusion_bp = EXCLUSION_BP_LARGE
+            current_exclusion_bp = exclusion_bp_large
 
         start_mask = (df['chrom'] == chrom) & (df['start'] < current_exclusion_bp)
         end_mask = (df['chrom'] == chrom) & (df['end'] > chr_len - current_exclusion_bp)
@@ -162,7 +167,7 @@ def main():
         #df.loc[exclusion_mask, ['te_cov_n', 'gene_count_n', 'meth_diff_n']] = 0.0 ##, 'trf_cov_n', 'cov_anom_n', 'gc_low_n'
 
     # Weighted scoring
-    w = dict(trf=8.0, te=5.0, gene=1.0, meth=1.0, cov=0.5, gc=GC)
+    w = dict(trf=8.0, te=5.0, gene=1.0, meth=1.0, cov=0.5, gc=gc)
     df['centro_score'] = (
         w['trf'] * df['trf_cov_n'] +
         w['te'] * df['te_cov_n'] +
@@ -257,7 +262,7 @@ def main():
         # convert WINDOW (bp per row) to number of rows for rolling
         # fallback if WINDOW is not exact per-row size
         median_step = int(np.median(internal['end'] - internal['start']))
-        step = median_step if median_step > 0 else WINDOW
+        step = median_step if median_step > 0 else window
         window_n = max(3, int((2 * search_bp) / step))  # cover ~400 kb smoothing window by default
         # ensure window_n is odd for symmetric smoothing (not required, but okay)
         if window_n % 2 == 0:
