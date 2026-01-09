@@ -725,18 +725,24 @@ rule centromere_scoring_python:
     log:
         "results/{sample}/CENTROMERE_SCORING/{sample}_{window}/logs/centromere_scoring_final_{sample}.log"
     params:
-        outdir = "results/{sample}/CENTROMERE_SCORING/{sample}_{window}"
+        outdir = "results/{sample}/CENTROMERE_SCORING/{sample}_{window}",
+        gc = config["gc"],
+        exclusion_bp_large = config["exclusion_bp_large"],
+        exclusion_bp_min = config["exclusion_bp_min"],
+        window = config["window"]
     shell:
         r"""
         mkdir -p "{params.outdir}/logs"
 
-        cp "{input.features}" "{params.outdir}/windows.features.tsv"
-
-        # Use an absolute log path so redirection still works after cd
-        LOGFILE="$(realpath "{log}")"
-        FAI="$(realpath "{input.fai}")"
-
-        cd "{params.outdir}"
-        python3 ../../../../score_centromeres.py "$FAI" &> "$LOGFILE"
+        python3 score_centromeres.py \
+          --features "{input.features}" \
+          --fai "{input.fai}" \
+          --outdir "{params.outdir}" \
+          --gc "{params.gc}" \
+          --exclusion-bp-large "{params.exclusion_bp_large}" \
+          --exclusion-bp-min "{params.exclusion_bp_min}" \
+          --window "{wildcards.window}" \
+          &> "{log}"
         """
+
 
