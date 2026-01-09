@@ -93,23 +93,27 @@ To run a sample you will need to add it to the config file in the following mann
 
 ```
 samples:
-    Sample_name:
-        platform: nanopore or pacbio
+    nanopore:
+        nanopore_sample_name:
+    pacbio:
+        pacbio_sample_name:
 ```
 
 For example:
 ```
 samples:
-    Guy11:
-        platform: nanopore
-    Guy11_chr1:
-        platform: nanopore
-    Fo4287v4:
-        platform: pacbio
+    nanopore:
+        Guy11:
+        Guy11_chr1:
+    pacbio:
+        Fo4287v4:
 ```
 
 Additional parameters that you may wish to change:
 - cpus_per_task - although we found that on our system performance was not improved beyond 12
+- gc #### FIXME: this needs an explanation
+- exclusion_bp_large #### FIXME: this needs an explanation
+- exclusion_bp_min #### FIXME: this needs an explanation
 - window – window size (in bp) used during centromere scoring
 
 The following paths must be updated to match your local environment:
@@ -149,6 +153,9 @@ You may run the entire pipeline with the following:
 
 ```
 snakemake --use-conda --conda-frontend conda --cores 12 results/Guy11_chr1/CENTROMERE_SCORING/Guy11_chr1_1000/centro_candidates.bed
+
+# Or to run all uncompleted steps on all samples:
+snakemake --use-conda --conda-frontend conda --cores 12
 ```
 
-Specifying this output file as the target will cause Snakemake to execute all required upstream steps automatically.
+Specifying the output file as the target will cause Snakemake to execute all required upstream steps automatically.
