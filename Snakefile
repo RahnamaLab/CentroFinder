@@ -95,7 +95,7 @@ rule all:
         expand("results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_best_candidates.bed", sample=SAMPLES_LIST, window=WINDOW),
 
 #### TRF ####
-rule run_trf:
+rule TRF_run:
     input:
         get_fasta
     output:
@@ -147,9 +147,10 @@ rule run_trf:
                 f"TRF failed to produce expected output file: {output[0]}"
             )
 
-rule convert_trf_to_bed:
+rule TRF_convert_to_bed:
     input:
-        "results/{sample}/TRF/{sample}.fasta" + TRF_SUFFIX
+        rules.TRF_run.output
+#        "results/{sample}/TRF/{sample}.fasta" + TRF_SUFFIX
     output:
         "results/{sample}/TRF/{sample}_trf.bed"
     log:
@@ -164,7 +165,7 @@ rule convert_trf_to_bed:
         """
 
 ##### EDTA #####
-rule edta_cds:
+rule EDTA_cds:
     input:
         fasta = get_fasta,
         gff   = get_gff3
@@ -179,7 +180,7 @@ rule edta_cds:
         gffread -x {output.cds} -g {input.fasta} {input.gff} &> {log}
         """
 
-rule edta_gff2bed:
+rule EDTA_gff2bed:
     input:
         gff = get_gff3
     output:
@@ -193,11 +194,13 @@ rule edta_gff2bed:
         gff2bed < {input.gff} > {output.bed} 2> {log}
         """
 
-rule edta_run:
+rule EDTA_run:
     input:
         fasta = get_fasta,
-        cds = "results/{sample}/EDTA/{sample}_cds.fasta",
-        bed = "results/{sample}/EDTA/{sample}.bed"
+        cds = rules.EDTA_cds.output.cds,
+#        cds = "results/{sample}/EDTA/{sample}_cds.fasta",
+        bed = rules.EDTA_gff2bed.output.bed
+#        bed = "results/{sample}/EDTA/{sample}.bed"
     output:
         edta_gff3 = "results/{sample}/EDTA/{sample}.fasta.mod.EDTA.TEanno.gff3"
     params:
@@ -249,9 +252,10 @@ rule edta_run:
         cp "$workdir/{wildcards.sample}.fasta.mod.EDTA.TEanno.gff3" {output.edta_gff3}
         """
 
-rule edta_bed:
+rule EDTA_bed:
     input:
-        edta_gff = "results/{sample}/EDTA/{sample}.fasta.mod.EDTA.TEanno.gff3"
+        edta_gff = rules.EDTA_run.output.edta_gff3
+#        edta_gff = "results/{sample}/EDTA/{sample}.fasta.mod.EDTA.TEanno.gff3"
     output:
         "results/{sample}/EDTA/{sample}_edta.bed"
     log:
@@ -270,7 +274,7 @@ rule edta_bed:
         """
 
 ###### Meth Nanopore #####
-rule mn_minimap2:
+rule MN_minimap2:
     input:
         fasta = get_fasta,
         fastq = get_fastq
@@ -286,9 +290,10 @@ rule mn_minimap2:
         minimap2 -t {threads} -ax map-ont -Y {input.fasta} {input.fastq} > {output.sam} 2> {log}
         """
 
-rule mn_samtools_sort:
+rule MN_samtools_sort:
     input:
-        sam = "results/{sample}/METH_NANOPORE/{sample}.sam"
+        sam = rules.MN_minimap2.output.sam
+#        sam = "results/{sample}/METH_NANOPORE/{sample}.sam"
     output:
         bam = "results/{sample}/METH_NANOPORE/{sample}_sorted.bam"
     log:
@@ -301,9 +306,10 @@ rule mn_samtools_sort:
         """
 
 
-rule mn_samtools_index:
+rule MN_samtools_index:
     input:
-        bam = "results/{sample}/METH_NANOPORE/{sample}_sorted.bam"
+        bam = rules.MN_samtools_sort.output.bam
+#        bam = "results/{sample}/METH_NANOPORE/{sample}_sorted.bam"
     output:
         bai = "results/{sample}/METH_NANOPORE/{sample}_sorted.bam.bai"
     log:
@@ -315,11 +321,13 @@ rule mn_samtools_index:
         samtools index {input.bam} 2> {log}
         """
 
-rule mn_modbam2bed:
+rule MN_modbam2bed:
     input:
         fasta = get_fasta,
-        bam   = "results/{sample}/METH_NANOPORE/{sample}_sorted.bam",
-        bai   = "results/{sample}/METH_NANOPORE/{sample}_sorted.bam.bai"
+        bam   = rules.MN_samtools_sort.output.bam,
+#        bam   = "results/{sample}/METH_NANOPORE/{sample}_sorted.bam",
+        bai   = rules.MN_samtools_index.output.bai
+#        bai   = "results/{sample}/METH_NANOPORE/{sample}_sorted.bam.bai"
     output:
         bed = "results/{sample}/METH_NANOPORE/{sample}_methyl.bed"
     log:
@@ -335,7 +343,7 @@ rule mn_modbam2bed:
 
 
 #### Meth Pacbio ####
-rule ccsmeth_call_hifi:
+rule MP_ccsmeth_call_hifi:
     input:
         bam   = get_bam
     output:
@@ -355,10 +363,11 @@ rule ccsmeth_call_hifi:
            --output {output.bam} &> {log}
         """
 
-rule ccsmeth_align_reads:
+rule MP_ccsmeth_align_reads:
     input:
         fasta = get_fasta,
-        bam   = "results/{sample}/METH_PACBIO/{sample}.hifi.bam"
+        bam   = rules.MP_ccsmeth_call_hifi.output.bam
+#        bam   = "results/{sample}/METH_PACBIO/{sample}.hifi.bam"
     output:
         bam   = "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.bam"
     log:
@@ -377,11 +386,11 @@ rule ccsmeth_align_reads:
            --threads {threads} &> {log}
         """
 
-rule ccsmeth_call_mods:
+rule MP_ccsmeth_call_mods:
     input:
         fasta = get_fasta,
-        bam   = "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.bam"
-
+        bam   = rules.MP_ccsmeth_align_reads.output.bam
+#        bam   = "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.bam"
     output:
         "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods.modbam.bam"
     log:
@@ -407,10 +416,11 @@ rule ccsmeth_call_mods:
             --mode {params.mode} &> {log}
         """
 
-rule ccsmeth_call_freqb:
+rule MP_ccsmeth_call_freqb:
     input:
         fasta = get_fasta,
-        bam   = "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods.modbam.bam"
+        bam   = rules.MP_ccsmeth_call_mods.output
+#        bam   = "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods.modbam.bam"
     output:
         "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods.modbam.freq.aggregate.all.bed"
     log:
@@ -435,7 +445,7 @@ rule ccsmeth_call_freqb:
         """
 
 ############# Centromere Scoring ##############
-rule centromere_scoring_index_fai:
+rule CENTROMERE_SCORING_index_fai:
     input:
         fasta = get_fasta
     output:
@@ -451,9 +461,9 @@ rule centromere_scoring_index_fai:
         cp {input.fasta}.fai {output.fai} &> {log}
         """
 
-rule centromere_scoring_make_windows:
+rule CENTROMERE_SCORING_make_windows:
     input:
-        fai = rules.centromere_scoring_index_fai.output.fai
+        fai = rules.CENTROMERE_SCORING_index_fai.output.fai
     output:
         bed = "results/{sample}/CENTROMERE_SCORING/{sample}.windows.{window}bp.bed"
     log:
@@ -476,9 +486,9 @@ rule centromere_scoring_make_windows:
         test -s {output.bed} || {{ echo "ERROR: {output.bed} is empty" >&2; exit 1; }}
         """
 
-rule centromere_scoring_trf2bed_sort:
+rule CENTROMERE_SCORING_trf2bed_sort:
     input:
-        trf_bed = rules.convert_trf_to_bed.output
+        trf_bed = rules.TRF_convert_to_bed.output
     output:
         sorted_bed = "results/{sample}/CENTROMERE_SCORING/{sample}.trf.sorted.bed"
     log:
@@ -498,9 +508,9 @@ rule centromere_scoring_trf2bed_sort:
         }}' OFS="\t" {input.trf_bed} | sort -k1,1V -k2,2n > {output.sorted_bed}; }} &> {log}
         """
 
-rule centromere_scoring_sort_TE:
+rule CENTROMERE_SCORING_sort_TE:
     input:
-        edta = rules.edta_bed.output
+        edta = rules.EDTA_bed.output
     output:
         sorted_bed = "results/{sample}/CENTROMERE_SCORING/{sample}.te.sorted.bed"
     log:
@@ -512,12 +522,12 @@ rule centromere_scoring_sort_TE:
         {{ sort -k1,1V -k2,2n {input.edta} > {output.sorted_bed}; }} &> {log}
         """
 
-rule centromere_scoring_sort_methylation:
+rule CENTROMERE_SCORING_sort_methylation:
     input:
         methyl=lambda wildcard: (
-            rules.mn_modbam2bed.output.bed
+            rules.MN_modbam2bed.output.bed
             if is_nanopore(wildcard.sample)
-            else rules.ccsmeth_call_freqb.output
+            else rules.MP_ccsmeth_call_freqb.output
         )
     output:
         bedgraph = "results/{sample}/CENTROMERE_SCORING/{sample}.methylation.sorted.bedgraph"
@@ -542,10 +552,10 @@ rule centromere_scoring_sort_methylation:
         fi
         """
 
-rule centromere_scoring_TRF_coverage:
+rule CENTROMERE_SCORING_TRF_coverage:
     input:
-        bed = rules.centromere_scoring_make_windows.output.bed,
-        trf_bed = rules.centromere_scoring_trf2bed_sort.output.sorted_bed
+        bed = rules.CENTROMERE_SCORING_make_windows.output.bed,
+        trf_bed = rules.CENTROMERE_SCORING_trf2bed_sort.output.sorted_bed
     output:
         tmp_bed = "results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.trf_counts.bed"
     log:
@@ -559,10 +569,10 @@ rule centromere_scoring_TRF_coverage:
         {{ bedtools coverage -a {input.bed} -b {input.trf_bed} -counts > {output.tmp_bed}; }} &> {log}
         """
 
-rule centromere_scoring_TE_coverage:
+rule CENTROMERE_SCORING_TE_coverage:
     input:
-        bed = rules.centromere_scoring_make_windows.output.bed,
-        te_bed = rules.centromere_scoring_sort_TE.output.sorted_bed
+        bed = rules.CENTROMERE_SCORING_make_windows.output.bed,
+        te_bed = rules.CENTROMERE_SCORING_sort_TE.output.sorted_bed
     output:
         tmp_bed = "results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.te_counts.bed"
     log:
@@ -576,7 +586,7 @@ rule centromere_scoring_TE_coverage:
         {{ bedtools coverage -a {input.bed} -b {input.te_bed} -counts > {output.tmp_bed}; }} &> {log}
         """
 
-rule centromere_scoring_gene_counts:
+rule CENTROMERE_SCORING_gene_counts:
     input:
         gff3 = get_gff3
     output:
@@ -590,10 +600,10 @@ rule centromere_scoring_gene_counts:
         {{ awk '$3=="gene" {{print $1"\t"($4-1)"\t"$5"\t"$9}}' {input.gff3} > {output.genes_bed}; }} &> {log}
         """
 
-rule centromere_scoring_gene_counts_bedtools_coverage:
+rule CENTROMERE_SCORING_gene_counts_bedtools_coverage:
     input:
-        genes_bed = rules.centromere_scoring_gene_counts.output.genes_bed,
-        window_bed = rules.centromere_scoring_make_windows.output.bed
+        genes_bed = rules.CENTROMERE_SCORING_gene_counts.output.genes_bed,
+        window_bed = rules.CENTROMERE_SCORING_make_windows.output.bed
     output:
         genes_bed = "results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.gene_counts.bed"
     log:
@@ -605,12 +615,12 @@ rule centromere_scoring_gene_counts_bedtools_coverage:
         {{ bedtools coverage -a {input.window_bed} -b {input.genes_bed} -counts > {output.genes_bed}; }} &> {log}
         """
 
-rule centromere_scoring_hifi_coverage:
+rule CENTROMERE_SCORING_hifi_coverage:
     input:
         hifi = lambda wildcard: (
-            rules.mn_samtools_sort.output.bam
+            rules.MN_samtools_sort.output.bam
             if is_nanopore(wildcard.sample)
-            else rules.ccsmeth_align_reads.output.bam
+            else rules.MP_ccsmeth_align_reads.output.bam
         )
     output:
         bed = "results/{sample}/CENTROMERE_SCORING/{sample}.hifi.depth.bed"
@@ -630,10 +640,10 @@ rule centromere_scoring_hifi_coverage:
         fi
         """
 
-rule centromere_scoring_hifi_coverage_bedtools_map:
+rule CENTROMERE_SCORING_hifi_coverage_bedtools_map:
     input:
-        window = rules.centromere_scoring_make_windows.output.bed,
-        bed = rules.centromere_scoring_hifi_coverage.output.bed
+        window = rules.CENTROMERE_SCORING_make_windows.output.bed,
+        bed = rules.CENTROMERE_SCORING_hifi_coverage.output.bed
     output:
         bed = "results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.hifi_cov_mean.bed"
     log:
@@ -645,10 +655,10 @@ rule centromere_scoring_hifi_coverage_bedtools_map:
         {{ bedtools map -a {input.window} -b {input.bed} -c 4 -o mean -null 0 > {output.bed}; }} &> {log}
         """
 
-rule centromere_scoring_mean_methylation_per_window:
+rule CENTROMERE_SCORING_mean_methylation_per_window:
     input:
-        window = rules.centromere_scoring_make_windows.output.bed,
-        bedgraph = rules.centromere_scoring_sort_methylation.output.bedgraph
+        window = rules.CENTROMERE_SCORING_make_windows.output.bed,
+        bedgraph = rules.CENTROMERE_SCORING_sort_methylation.output.bedgraph
     output:
         bed = "results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.meth_mean.bed"
     log:
@@ -666,10 +676,10 @@ rule centromere_scoring_mean_methylation_per_window:
         fi
         """
 
-rule centromere_scoring_calculate_gc_content_per_window:
+rule CENTROMERE_SCORING_calculate_gc_content_per_window:
     input:
         fasta = get_fasta,
-        window = rules.centromere_scoring_make_windows.output.bed
+        window = rules.CENTROMERE_SCORING_make_windows.output.bed
     output:
         bed = "results/{sample}/CENTROMERE_SCORING/{sample}.{window}.tmp.gc_content.bed"
     log:
@@ -681,15 +691,15 @@ rule centromere_scoring_calculate_gc_content_per_window:
         {{ bedtools nuc -fi {input.fasta} -bed {input.window} | awk 'NR>1 {{print $1"\t"$2"\t"$3"\t"$5}}' > {output.bed}; }} &> {log}
         """
 
-rule centromere_scoring_combine_features:
+rule CENTROMERE_SCORING_combine_features:
     input:
-        windows = rules.centromere_scoring_make_windows.output.bed,
-        trf     = rules.centromere_scoring_TRF_coverage.output.tmp_bed,
-        te      = rules.centromere_scoring_TE_coverage.output.tmp_bed,
-        gene    = rules.centromere_scoring_gene_counts_bedtools_coverage.output.genes_bed,
-        hifi    = rules.centromere_scoring_hifi_coverage_bedtools_map.output.bed,
-        meth    = rules.centromere_scoring_mean_methylation_per_window.output.bed,
-        gc      = rules.centromere_scoring_calculate_gc_content_per_window.output.bed
+        windows = rules.CENTROMERE_SCORING_make_windows.output.bed,
+        trf     = rules.CENTROMERE_SCORING_TRF_coverage.output.tmp_bed,
+        te      = rules.CENTROMERE_SCORING_TE_coverage.output.tmp_bed,
+        gene    = rules.CENTROMERE_SCORING_gene_counts_bedtools_coverage.output.genes_bed,
+        hifi    = rules.CENTROMERE_SCORING_hifi_coverage_bedtools_map.output.bed,
+        meth    = rules.CENTROMERE_SCORING_mean_methylation_per_window.output.bed,
+        gc      = rules.CENTROMERE_SCORING_calculate_gc_content_per_window.output.bed
     output:
         tsv = "results/{sample}/CENTROMERE_SCORING/{sample}.{window}.windows.features.tsv"
     log:
@@ -711,10 +721,10 @@ rule centromere_scoring_combine_features:
             >> {output.tsv}; }} &>> {log}
         """
 
-rule centromere_scoring_python:
+rule CENTROMERE_SCORING_python:
     input:
-        features = rules.centromere_scoring_combine_features.output.tsv,
-        fai = rules.centromere_scoring_index_fai.output.fai
+        features = rules.CENTROMERE_SCORING_combine_features.output.tsv,
+        fai = rules.CENTROMERE_SCORING_index_fai.output.fai
     output:
         windows_ranked_tsv = "results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_windows_ranked.tsv",
         best_windows_tsv   = "results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_best_windows_marked.tsv",
