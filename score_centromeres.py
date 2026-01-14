@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
 import os, sys, numpy as np, pandas as pd, matplotlib.pyplot as plt, argparse
 
-DEFAULT_GC=1.0
 # Standard large exclusion zone (for long chromosomes)
 DEFAULT_EXCLUSION_BP_LARGE = 100000
 # Minimal exclusion zone (for very short scaffolds, e.g., 100 kbp)
 DEFAULT_EXCLUSION_BP_MIN = 10000
 DEFAULT_WINDOW = 1000
+
+# Weighted Scoring Dict Values
+DEFAULT_TRF=8.0
+DEFAULT_TE=5.0
+DEFAULT_GENE=1.0
+DEFAULT_METH=1.0
+DEFAULT_COV=0.5
+DEFAULT_GC=1.0
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -29,6 +36,41 @@ def parse_args():
     "--outdir",
     required=True,
     help="Output directory for centromere scoring results.",
+    )
+
+    parser.add_argument(
+    "--trf",
+    type=float,
+    default=DEFAULT_TRF,
+    help="Weight for TRF feature in the scoring model (default: %(default)s.",
+    )
+
+    parser.add_argument(
+    "--TE",
+    type=float,
+    default=DEFAULT_TE,
+    help="Weight for TE feature in the scoring model (default: %(default)s.",
+    )
+
+    parser.add_argument(
+    "--gene",
+    type=float,
+    default=DEFAULT_GENE,
+    help="Weight for GENE feature in the scoring model (default: %(default)s.",
+    )
+
+    parser.add_argument(
+    "--meth",
+    type=float,
+    default=DEFAULT_METH,
+    help="Weight for METH feature in the scoring model (default: %(default)s.",
+    )
+
+    parser.add_argument(
+    "--cov",
+    type=float,
+    default=DEFAULT_COV,
+    help="Weight for COV feature in the scoring model (default: %(default)s.",
     )
 
     parser.add_argument(
@@ -99,33 +141,26 @@ def main():
 
     out_prefix = os.path.join(outdir, "centro")
 
-    gc = args.gc
     exclusion_bp_large = args.exclusion_bp_large
     exclusion_bp_min = args.exclusion_bp_min
     window = args.window
 
-#    fn = "windows.features.tsv"
-#    out_prefix = "centro"
-
-#    # Chromosome length file (passed as argument 1)
-#    try:
-#        FAI_FILE = sys.argv[1]
-#    except IndexError:
-#        print("Error: FAI file path must be provided as the first argument.")
-#        sys.exit(1)
-
-
+    # Weight Scoring Dict Values 
+    gc = args.gc
+    trf = args.trf
+    te = args.te
+    gene = args.gene
+    meth = args.meth
+    cov = args.cov
 
     # ==============================
     # PREPARE DATA
     # ==============================
-#    df = pd.read_csv(fn, sep='\t')
     df = pd.read_csv(features_path, sep='\t')
 
     # Load chromosome lengths from FAI file
     chr_lengths = {}
     try:
-#        with open(FAI_FILE, 'r') as f:
         with open(fai_path, 'r') as f:
             for line in f:
                 parts = line.strip().split('\t')
@@ -164,10 +199,9 @@ def main():
         exclusion_mask = start_mask | end_mask
 
         df.loc[exclusion_mask, 'is_excluded'] = True
-        #df.loc[exclusion_mask, ['te_cov_n', 'gene_count_n', 'meth_diff_n']] = 0.0 ##, 'trf_cov_n', 'cov_anom_n', 'gc_low_n'
 
     # Weighted scoring
-    w = dict(trf=8.0, te=5.0, gene=1.0, meth=1.0, cov=0.5, gc=gc)
+    w = dict(trf=trf, te=te gene=gene, meth=meth, cov=cov, gc=gc)
     df['centro_score'] = (
         w['trf'] * df['trf_cov_n'] +
         w['te'] * df['te_cov_n'] +

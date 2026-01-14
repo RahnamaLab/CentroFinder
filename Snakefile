@@ -736,10 +736,15 @@ rule CENTROMERE_SCORING_python:
         "results/{sample}/CENTROMERE_SCORING/{sample}_{window}/logs/centromere_scoring_final_{sample}.log"
     params:
         outdir = "results/{sample}/CENTROMERE_SCORING/{sample}_{window}",
-        gc = config["gc"],
         exclusion_bp_large = config["exclusion_bp_large"],
         exclusion_bp_min = config["exclusion_bp_min"],
-        window = config["window"]
+        window = config["window"],
+        trf = config["trf"],
+        te = config["te"],
+        gene = config["gene"],
+        meth = config["meth"],
+        cov = config["cov"],
+        gc = config["gc"]
     shell:
         r"""
         mkdir -p "{params.outdir}/logs"
@@ -748,11 +753,15 @@ rule CENTROMERE_SCORING_python:
           --features "{input.features}" \
           --fai "{input.fai}" \
           --outdir "{params.outdir}" \
+          --trf "{params.trf}" \
+          --te "{params.te}" \
+          --gene "{params.gene}" \
+          --meth "{params.meth}" \
+          --cov "{params.cov}" \
           --gc "{params.gc}" \
           --exclusion-bp-large "{params.exclusion_bp_large}" \
           --exclusion-bp-min "{params.exclusion_bp_min}" \
           --window "{wildcards.window}" \
           &> "{log}"
         """
-
-
+        

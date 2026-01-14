@@ -11,10 +11,17 @@ pacbio_dir: data/pacbio
 cpus_per_task: 12
 
 # Centromere Scoring
-gc: 1.0
 exclusion_bp_large: 100000
 exclusion_bp_min: 10000
 window: 1000
+
+# Centromer Scoring: Scoring Model Values
+trf=8.0
+te=5.0
+gene=1.0
+meth=1.0
+cov=0.5
+gc: 1.0
     
 # Specific to TRF steps 
 trf_params:  # defaults are 2 7 7 80 10 50 2000 -h
@@ -38,7 +45,7 @@ container:
     PATH: /usr/local/bin:$PATH
 
 edta:
-  sif: /work/projects/its/scolson/biology/sahar_software_pipeline/CentromerDetection/edta2.sif
+  sif: /work/projects/its/scolson/biology/sahar_software_pipeline/CentromerDetection_private/edta.sif
   species: others
   overwrite: 1
   sensitive: 1

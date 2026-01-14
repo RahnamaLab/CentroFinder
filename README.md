@@ -111,10 +111,15 @@ samples:
 
 Additional parameters that you may wish to change:
 - cpus_per_task - although we found that on our system performance was not improved beyond 12
-- gc #### FIXME: this needs an explanation
 - exclusion_bp_large #### FIXME: this needs an explanation
 - exclusion_bp_min #### FIXME: this needs an explanation
 - window – window size (in bp) used during centromere scoring
+- trf #### FIXME: this needs an explanation
+- te #### FIXME: this needs an explanation
+- gene #### FIXME: this needs an explanation
+- meth #### FIXME: this needs an explanation
+- cov #### FIXME: this needs an explanation
+- gc #### FIXME: this needs an explanation
 
 The following paths must be updated to match your local environment:
 ```
