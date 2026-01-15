@@ -46,7 +46,7 @@ def parse_args():
     )
 
     parser.add_argument(
-    "--TE",
+    "--te",
     type=float,
     default=DEFAULT_TE,
     help="Weight for TE feature in the scoring model (default: %(default)s.",
@@ -201,7 +201,7 @@ def main():
         df.loc[exclusion_mask, 'is_excluded'] = True
 
     # Weighted scoring
-    w = dict(trf=trf, te=te gene=gene, meth=meth, cov=cov, gc=gc)
+    w = dict(trf=trf, te=te, gene=gene, meth=meth, cov=cov, gc=gc)
     df['centro_score'] = (
         w['trf'] * df['trf_cov_n'] +
         w['te'] * df['te_cov_n'] +
