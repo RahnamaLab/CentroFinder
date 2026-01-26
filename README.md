@@ -1,7 +1,6 @@
 # Centromere Detection Pipeline
 
 This pipeline performs centromere detection and scoring for fungal genomes using Nanopore and PacBio sequencing data. It is implemented as a Snakemake workflow designed for execution on an HPC system with optional GPU acceleration.
-The pipeline automatically selects the appropriate processing path based on sequencing platform (Nanopore or PacBio).
 
 The pipeline automatically selects the appropriate processing path based on sequencing platform (Nanopore or PacBio).
 
