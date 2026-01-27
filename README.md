@@ -88,17 +88,73 @@ samples:
 ```
 
 Additional parameters that you may wish to change:
-- cpus_per_task - although we found that on our system, performance was not improved beyond 12
-- exclusion_bp_large #### FIXME: this needs an explanation
-- exclusion_bp_min #### FIXME: this needs an explanation
-- window – window size (in bp) used during centromere scoring
-- trf #### FIXME: this needs an explanation
-- te #### FIXME: this needs an explanation
-- gene #### FIXME: this needs an explanation
-- meth #### FIXME: this needs an explanation
-- cov #### FIXME: this needs an explanation
-- gc #### FIXME: this needs an explanation
+```
+# ================================
+# Performance parameters
+# ================================
 
+# Number of CPU cores to use per task.
+# Increasing beyond ~12 cores did not improve performance on our system,
+# but this may vary depending on hardware and input genome size.
+cpus_per_task: 12
+
+
+# ================================
+# Centromere prediction parameters
+# ================================
+
+# Size (in base pairs) of the sliding window used for centromere scoring.
+# Smaller windows increase resolution but may introduce noise,
+# while larger windows provide smoother signals at lower resolution.
+window: 10000
+
+
+# ================================
+# Subtelomeric exclusion parameters
+# ================================
+
+# Number of base pairs excluded from each chromosome end for core chromosomes.
+# Subtelomeric regions are often repeat-rich and gene-poor and can generate
+# false-positive centromere predictions.
+exclusion_bp_large: 500000
+
+# Number of base pairs excluded from each chromosome end for accessory
+# or mini-chromosomes, which are typically much shorter.
+exclusion_bp_min: 50000
+
+
+# ================================
+# Feature weights for centromere scoring
+# ================================
+# The centromere score for each window is calculated as:
+#   score = Σ (weight_i × feature_i)
+# where feature_i is the normalized value of each feature in the window.
+
+# Weight for tandem repeat (TRF) density.
+# Centromeres are frequently enriched in tandem repeats.
+trf: 4
+
+# Weight for transposable element (TE) content.
+# TE-rich regions are commonly associated with fungal centromeres.
+te: 3
+
+# Weight for gene absence.
+# Centromeric regions are typically gene-poor.
+gene: 1
+
+# Weight for CpG methylation.
+# Methylation is often elevated in centromeric and pericentromeric chromatin.
+meth: 1
+
+# Weight for sequencing coverage anomalies.
+# Centromeres often show abnormal read depth due to repeats and mapping bias.
+cov: 1
+
+# Weight for GC depletion.
+# Many fungal centromeres are AT-rich relative to chromosome averages.
+gc: 1
+
+```
 The following paths must be updated to match your local environment:
 ```
 # Singularity + EDTA
