@@ -64,10 +64,16 @@ For example:
 └── data
    └── nanopore
        └── cdeut
-           ├── cdeut.fasta  
-           ├── cdeut.fastq
-           └── cdeut.gff3
-  
+           ├── cdeut.fasta # Reference genome
+           ├── cdeut.fastq # Nanopore reads (FASTQ)
+           └── cdeut.gff3 # Genome annotation
+# ================================
+# Regarding cdeut.fastq
+# ================================
+# Nanopore sequencing data for Cryptococcus deuterogattii R265 were downloaded from the following source:
+# https://sra-pub-src-1.s3.amazonaws.com/SRR6363418/R265_Albacore.tgz.1
+# The raw Nanopore signal files were basecalled using Guppy to generate FASTQ reads. The resulting FASTQ file was placed in the following directory:
+# data/nanopore/cdeut/cdeut.fastq
 ```
 
 It is important to note that the Snakefile is looking for the samples to be in either a nanopore or pacbio directory then inside of a directory of the sample name and files must have the specific file extensions listed above.
