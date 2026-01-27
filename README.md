@@ -5,7 +5,10 @@ This pipeline performs centromere detection and scoring for fungal genomes using
 The pipeline automatically selects the appropriate processing path based on the sequencing platform (Nanopore or PacBio).
 ## Centromere prediction example
 
-![Centromere plot] (https://github.com/RahnamaLab/CentroFinder/edit/main/image/Figure 1.pdf)
+<p align="center">
+  <img src="image/Figure 1.pdf" width="800">
+</p>
+
 ## Required Software
 
 The following software libraries were used to create this pipeline. Unless otherwise stated, these were loaded using the installed versions available through the Tennessee Tech University HPC Spack v0.21.1 system installation. We've listed the versions we used, but haven't extensively tested them with upstream or downstream versions.
