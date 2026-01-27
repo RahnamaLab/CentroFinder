@@ -106,7 +106,7 @@ cpus_per_task: 12
 # Size (in base pairs) of the sliding window used for centromere scoring.
 # Smaller windows increase resolution but may introduce noise,
 # while larger windows provide smoother signals at lower resolution.
-window: 10000
+window: 1000 #default
 
 
 # ================================
@@ -116,11 +116,11 @@ window: 10000
 # Number of base pairs excluded from each chromosome end for core chromosomes.
 # Subtelomeric regions are often repeat-rich and gene-poor and can generate
 # false-positive centromere predictions.
-exclusion_bp_large: 500000
+exclusion_bp_large: 100000 #default
 
 # Number of base pairs excluded from each chromosome end for accessory
 # or mini-chromosomes, which are typically much shorter.
-exclusion_bp_min: 50000
+exclusion_bp_min: 10000 #default
 
 
 # ================================
@@ -132,27 +132,27 @@ exclusion_bp_min: 50000
 
 # Weight for tandem repeat (TRF) density.
 # Centromeres are frequently enriched in tandem repeats.
-trf: 4
+trf: 8 #default
 
 # Weight for transposable element (TE) content.
 # TE-rich regions are commonly associated with fungal centromeres.
-te: 3
+te: 5 #default
 
 # Weight for gene absence.
 # Centromeric regions are typically gene-poor.
-gene: 1
+gene: 1 #default
 
 # Weight for CpG methylation.
 # Methylation is often elevated in centromeric and pericentromeric chromatin.
-meth: 1
+meth: 1 #default
 
 # Weight for sequencing coverage anomalies.
 # Centromeres often show abnormal read depth due to repeats and mapping bias.
-cov: 1
+cov: 0.5 #default
 
 # Weight for GC depletion.
 # Many fungal centromeres are AT-rich relative to chromosome averages.
-gc: 1
+gc: 1 #default
 
 ```
 The following paths must be updated to match your local environment:
