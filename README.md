@@ -2,17 +2,17 @@
 
 This pipeline performs centromere detection and scoring for fungal genomes using Nanopore and PacBio sequencing data. It is implemented as a Snakemake workflow designed for execution on an HPC system with optional GPU acceleration.
 
-The pipeline automatically selects the appropriate processing path based on sequencing platform (Nanopore or PacBio).
+The pipeline automatically selects the appropriate processing path based on the sequencing platform (Nanopore or PacBio).
 
 ## Required Software
 
-The following software libraries were used in the creation of this pipeline. Unless otherwise stated, these were loaded using the installed versions available through the Tennessee Tech University HPC Spack v0.21.1 system installation. We've listed the versions that we used but have not extensively tested on downstream or upstream versions.
+The following software libraries were used to create this pipeline. Unless otherwise stated, these were loaded using the installed versions available through the Tennessee Tech University HPC Spack v0.21.1 system installation. We've listed the versions we used, but haven't extensively tested them with upstream or downstream versions.
 
 ### Workflow and Environment Management
 - snakemake@7.22.0
 - singularityce@3.11.3 
 - miniconda3@22.11.1
-- graphviz@8.0.5 - not strictly necessary but useful for creating the visual DAG for the processing of the sample through the pipeline
+- graphviz@8.0.5 - not strictly necessary, but useful for creating the visual DAG for the processing of the sample through the pipeline
 
 ### Core Bioinformatics Tools
 - trf@4.09.1
@@ -77,7 +77,7 @@ The original data files must be set up in this manner and living in the correct 
 ## About the config.yaml
 The `config.yaml` will be your opportunity to customize the Snakefile to a certain extent. 
 
-To run a sample you will need to add it to the config file in the following manner:
+To run a sample, you will need to add it to the config file in the following manner:
 
 ```
 samples:
@@ -87,18 +87,8 @@ samples:
         pacbio_sample_name:
 ```
 
-For example:
-```
-samples:
-    nanopore:
-        Guy11:
-        Guy11_chr1:
-    pacbio:
-        Fo4287v4:
-```
-
 Additional parameters that you may wish to change:
-- cpus_per_task - although we found that on our system performance was not improved beyond 12
+- cpus_per_task - although we found that on our system, performance was not improved beyond 12
 - exclusion_bp_large #### FIXME: this needs an explanation
 - exclusion_bp_min #### FIXME: this needs an explanation
 - window – window size (in bp) used during centromere scoring
@@ -139,7 +129,7 @@ The Snakefile is looking for the specific output that you wish to create.
 We will use the files that have been used as an example throughout the documentation. 
 
 1. Ensure that the needed software has been installed and loaded.
-2. Add the data. For this example we will use the Guy11_chr1 sample data which will run through the nanopore portion of the pipeline. Those files should be placed in the CentromerDetection directory in data/nanopore/Guy11_chr1.
+2. Add the data. For this example, we will use the Guy11_chr1 sample data, which will run through the nanopore portion of the pipeline. Those files should be placed in the CentromerDetection directory in data/nanopore/Guy11_chr1.
 3. Set your config values according to the previous instructions.
 
 You may run the entire pipeline with the following:
