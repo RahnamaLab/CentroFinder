@@ -46,16 +46,18 @@ def is_nanopore(sample):
 def is_pacbio(sample):
     return sample in PACBIO_SAMPLES
 
-def get_base_dir(sample):
+def get_platform(sample):
     if sample in NANOPORE_SAMPLES:
+        return "nanopore"
+    if sample in PACBIO_SAMPLES:
+        return "pacbio"
+    raise ValueError(f"Sample '{sample}' not found under config['samples']['nanopore'] or ['pacbio'].")
+
+def get_base_dir(sample):
+    platform = get_platform(sample)
+    if platform == "nanopore":
         return NANOPORE_DIR
-    elif sample in PACBIO_SAMPLES:
-        return PACBIO_DIR
-    else:
-        raise ValueError(
-            f"Sample '{sample}' is not listed. "
-            "Check config.yaml sample lists."
-        )
+    return PACBIO_DIR
 
 def get_path_with_ext(wildcards, ext):
     base = get_base_dir(wildcards.sample)
@@ -721,11 +723,11 @@ rule CENTROMERE_SCORING_python:
         candidates_bed    = "results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_candidates.bed",
         candidates_ranked_tsv = "results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_candidates_ranked.tsv",
         best_candidates_bed = "results/{sample}/CENTROMERE_SCORING/{sample}_{window}/centro_best_candidates.bed"
-
     log:
         "results/{sample}/CENTROMERE_SCORING/{sample}_{window}/logs/centromere_scoring_final_{sample}.log"
     params:
         outdir = "results/{sample}/CENTROMERE_SCORING/{sample}_{window}",
+        platform = lambda wc: get_platform(wc.sample),
         exclusion_bp_large = config["exclusion_bp_large"],
         exclusion_bp_min = config["exclusion_bp_min"],
         window = config["window"],
@@ -743,6 +745,7 @@ rule CENTROMERE_SCORING_python:
           --features "{input.features}" \
           --fai "{input.fai}" \
           --outdir "{params.outdir}" \
+          --platform "{params.platform}" \
           --trf "{params.trf}" \
           --te "{params.te}" \
           --gene "{params.gene}" \
