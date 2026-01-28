@@ -1,0 +1,11 @@
+name: centro_env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - bedtools2=0.9.0
+  - pandas=2.1.2
+  - samtools=1.16.1
+  - matplotlib=3.7.3
+  - biopython=1.81

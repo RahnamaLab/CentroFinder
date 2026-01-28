@@ -1,11 +1,8 @@
-name: ccsmeth_env
+name: trf_env
 channels:
   - conda-forge
   - bioconda
   - defaults
 dependencies:
-  - ccsmeth
-  - pbccs
   - python=3.10
-  - numpy
-  - samtools=1.16.1
+  - trf=4.09.1
