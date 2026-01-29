@@ -3,6 +3,7 @@
 This pipeline performs centromere detection and scoring for fungal genomes using Nanopore and PacBio sequencing data. It is implemented as a Snakemake workflow designed for execution on an HPC system with optional GPU acceleration.
 
 The pipeline automatically selects the appropriate processing path based on the sequencing platform (Nanopore or PacBio).
+
 ## Centromere prediction example
 
 <p align="center">
@@ -11,42 +12,62 @@ The pipeline automatically selects the appropriate processing path based on the 
 
 ## Required Software
 
-The following software libraries were used to create this pipeline. Unless otherwise stated, these were loaded using the installed versions available through the Tennessee Tech University HPC Spack v0.21.1 system installation. We've listed the versions we used, but haven't extensively tested them with upstream or downstream versions.
+The CentroFinder pipeline relies on a combination of workflow tools, Conda-managed bioinformatics software, and a small number of externally provided components (e.g., Singularity containers and optional GPU libraries).
 
 ### Workflow and Environment Management
-- snakemake@7.22.0
-- singularityce@3.11.3 
-- miniconda3@22.11.1
-- graphviz@8.0.5 - not strictly necessary, but useful for creating the visual DAG for the processing of the sample through the pipeline
+
+The following component must be available on the system **prior to setup**:
+
+- miniconda3>=22.11.1
+- singularityce>=3.11.3
+
+All other workflow dependencies can be installed automatically using the provided Conda environment (see the **Quick Start** section):
+
+- snakemake>=7.22.0  
+- singularityce>=3.11.3  
+- graphviz>=8.0.5 (optional; used for visualizing the workflow DAG)
 
 ### Core Bioinformatics Tools
-- trf@4.09.1
-- samtools@1.16.1 
-- cdhit@4.8.1
-- gffread@0.12.7
-- bedops@2.4.41 
-- minimap2@2.26^python@3.10 - The python version was added here to avoid conflicts with other dependencies on our system and, again, may not be strictly necessary.
 
-The following were used to accelerate the use of the ccsmeth and pbccs libraries via a GPU. 
-- py-biopython@1.81 
-- py-torch@2.1.0 - spack hash /rvl 
-- py-pybedtools@0.9.0
-- py-scikit-learn@1.3.2
-- py-statsmodels@0.14.0  
+All core bioinformatics dependencies are managed automatically by Snakemake using Conda and will be created during the initial execution when running with `--use-conda`.
 
-In addition to these, [ccsmeth](https://github.com/PengNi/ccsmeth) and [pbccs](https://ccs.how/) are necessary. They are available via conda install, however this pipeline makes the effort to create and implement the necessary conda environment (which may be found in envs/ccsmeth.yaml) therefore, manual installation of these softwares should not be necessary. 
+No manual installation of the following tools is required.
 
-The software [modbam2bed](https://github.com/epi2me-labs/modbam2bed) is not currently available via Spack on our system and was therefore installed from source using the following instructions:
-```
-git clone --recursive https://github.com/epi2me-labs/modbam2bed.git
-make modbam2bed
-./modbam2bed
-```
+- biopython>=1.81 
+- trf>=4.09.1
+- samtools>=1.16.1 
+- cdhit>=4.8.1
+- gffread>=0.12.7
+- bedops>=2.4.41 
+- minimap2>=2.26
+- ccsmeth>=0.5.0
+- pbccs>=6.3.0
+- modbam2bed>=0.10.0
+- matplotlib>=3.7.3
 
-The final software requirement is for the [edta](https://github.com/oushujun/EDTA) singularity container. This was installed using the [singularity instructions](https://github.com/oushujun/EDTA#install-with-singularity-good-for-hpc-users), specifically:
+### Optional GPU-Accelerated Components
+
+GPU acceleration is supported for methylation-related steps (ccsmeth and pbccs), but is **not required** to run the pipeline.
+
+If GPU acceleration is desired, the following libraries must be installed and available **prior to activating Conda environments**:
+
+- pytorch>=2.1.0
+- pybedtools>=0.9.0
+- scikit-learn>=1.3.2
+- statsmodels>=0.14.0
+
+If these libraries are not available, the pipeline will fall back to CPU execution. This takes much longer to complete. 
+
+### EDTA Singularity Container
+
+The pipeline requires the [EDTA transposable element annotation tool](https://github.com/oushujun/EDTA), which is executed via a Singularity container.
+
+The container can be built following the [Singularity instructions](https://github.com/oushujun/EDTA#install-with-singularity-good-for-hpc-users) provided by the EDTA project, for example:
+
 ```
 singularity build edta.sif docker://quay.io/biocontainers/edta:2.2.2--hdfd78af_1
 ```
+
 ## Setting up the file structure
 
 The file structure for storing the original data files is as follows:
@@ -82,12 +103,13 @@ For example:
 # data/nanopore/cdeut/cdeut.fastq
 ```
 
-It is important to note that the Snakefile is looking for the samples to be in either a nanopore or PacBio directory, then inside a directory of the sample name, and files must have the specific file extensions listed above.
+The Snakefile expects input data to be located under the `data/` directory, organized by sequencing platform (`nanopore/` or `pacbio/`), followed by a directory named after the sample.
 
-The original data files must be set up in this manner and living in the correct nanopore or PacBio directory for the Snakefile to determine the proper set of steps to traverse for the pipeline. 
+The original data files must be set up in this manner and living in the correct `nanopore` or `pacbio` directory for the Snakefile to determine the proper set of steps to traverse for the pipeline. 
 
 ## About the config.yaml
-The `config.yaml` will be your opportunity to customize the Snakefile to a certain extent. 
+
+The `config.yaml` file allows limited customization of pipeline behavior, including sample selection, performance parameters, and centromere scoring weights.
 
 To run a sample, you will need to add it to the config file in the following manner:
 
@@ -110,7 +132,6 @@ Additional parameters that you may wish to change:
 # but this may vary depending on hardware and input genome size.
 cpus_per_task: 12
 
-
 # ================================
 # Centromere prediction parameters
 # ================================
@@ -119,7 +140,6 @@ cpus_per_task: 12
 # Smaller windows increase resolution but may introduce noise,
 # while larger windows provide smoother signals at lower resolution.
 window: 1000 #default
-
 
 # ================================
 # Subtelomeric exclusion parameters
@@ -133,7 +153,6 @@ exclusion_bp_large: 100000 #default
 # Number of base pairs excluded from each chromosome end for accessory
 # or mini-chromosomes, which are typically much shorter.
 exclusion_bp_min: 10000 #default
-
 
 # ================================
 # Feature weights for centromere scoring
@@ -178,9 +197,6 @@ container:
 edta:
   sif: edta.sif # Location of your edta.sif
 
-# Meth Nanopore
-modbam2bed: "modbam2bed/modbam2bed" # Location of modbam2bed executable
-
 # Meth Pacbio
 ccsmeth:
     call_mod:
@@ -190,20 +206,33 @@ ccsmeth:
     call_freqb:
         model_file: "../models/model_ccsmeth_5mCpG_aggregate_attbigru_b11.v2p.ckpt"
 ```
+## Quick Start
+This pipeline may be run using conda environments via the included env.yaml.
+
+```
+# Clone or download the repository
+git clone https://github.com/RahnamaLab/CentroFinder.git
+cd CentroFinder
+
+# Create the base conda environment
+conda env create -f env.yaml
+```
 
 ## Running the Example Data
 The Snakefile is looking for the specific output that you wish to create. 
 
 We will use the files that have been used as an example throughout the documentation. 
 
-1. Ensure that the needed software has been installed and loaded.
-2. Add the data. For this example, we will use the cdeut sample data, which will run through the nanopore portion of the pipeline. Those files should be placed in the CentromerDetection directory in data/nanopore/cdeut.
-3. Set your config values according to the previous instructions.
+1. Ensure that SingularityCE and Miniconda3 have been installed and the software in the env.yaml has been installed either through a conda environment or otherwise. 
+2. Build the EDTA singularity image (edta.sif).
+3. Modify the config.yaml as needed for your local paths and environment. 
+4. Add the data. For this example, we will use the cdeut sample data, which will run through the nanopore portion of the pipeline. Those files should be placed in the CentromerDetection directory in data/nanopore/cdeut.
+5. Set your config values according to the previous instructions.
 
 You may run the entire pipeline with the following:
 
 ```
-snakemake --use-conda --conda-frontend conda --cores 12 config.yaml
+snakemake --use-conda --conda-frontend conda --cores 12 --configfile config.yaml
 
 # Or to run all uncompleted steps on all samples:
 snakemake --use-conda --conda-frontend conda --cores 12
@@ -212,7 +241,17 @@ snakemake --use-conda --conda-frontend conda --cores 12
 Specifying the output file as the target will cause Snakemake to execute all required upstream steps automatically.
 
 ## Output files
-After running the centromere prediction pipeline, results are written to the output directory (e.g., `cdetu_1000/`) with the following structure:
+
+After running the centromere prediction pipeline, results are written to a per-sample output directory using the configured window size:
+
+`results/<sample_name>/CENTROMERE_SCORING/<sample_name>_<window_size>/`
+
+For example:
+
+`results/cdeut/CENTROMERE_SCORING/cdeut_1000/`
+
+This directory contains the following structure:
+
 ```
 cdeut_1000/
 ├── centro_best_candidates.bed

@@ -1,9 +1,7 @@
 samples:
     nanopore:
-#        Guy11:
-        Guy11_chr1:
-#    pacbio:
-#        Fo4287v4:
+        cdetu:
+    pacbio:
 
 nanopore_dir: data/nanopore
 pacbio_dir: data/pacbio

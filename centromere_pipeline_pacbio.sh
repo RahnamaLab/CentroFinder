@@ -157,7 +157,8 @@ except Exception as e:
 
 
 def minmax(s):
-    if s.max() == s.min(): return s*0
+    if s.max() == s.min(): 
+        return s * 0
     return (s - s.min()) / (s.max() - s.min())
 
 # Normalize features
