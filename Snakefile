@@ -349,13 +349,14 @@ rule MN_modbam2bed:
         "results/{sample}/METH_NANOPORE/logs/mn_modbam2bed_{sample}.log"
     conda:
         "envs/minimap.yaml"
-    params:
-        modbam2bed = config["modbam2bed"]
+#    params:
+#        modbam2bed = config["modbam2bed"]
     shell:
         r"""
         mkdir -p "$(dirname {log})"
 
-        {params.modbam2bed} {input.fasta} {input.bam} > {output.bed} 2> {log}
+#        {params.modbam2bed} {input.fasta} {input.bam} > {output.bed} 2> {log}
+        modbam2bed {input.fasta} {input.bam} > {output.bed} 2> {log}
         """
 
 

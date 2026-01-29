@@ -1,9 +1,9 @@
 samples:
     nanopore:
-        Guy11:
+#        Guy11:
         Guy11_chr1:
-    pacbio:
-        Fo4287v4:
+#    pacbio:
+#        Fo4287v4:
 
 nanopore_dir: data/nanopore
 pacbio_dir: data/pacbio
@@ -39,13 +39,14 @@ container:
   binary: singularity
   binds:
     - /usr/bin/which
-    - /work
-    - $(spack location -i ncbi-rmblastn):/rmblast
+    - /home/exouser/
+#    - /work
+#    - $(spack location -i ncbi-rmblastn):/rmblast
   env:
     PATH: /usr/local/bin:$PATH
 
 edta:
-  sif: /work/projects/its/scolson/biology/sahar_software_pipeline/CentromerDetection_private/edta.sif
+  sif: edta.sif
   species: others
   overwrite: 1
   sensitive: 1
@@ -53,7 +54,7 @@ edta:
   force: 1
 
 # Meth Nanopore
-modbam2bed: "/work/projects/its/scolson/biology/sahar_software_pipeline/modbam2bed/modbam2bed"
+# modbam2bed: "/work/projects/its/scolson/biology/sahar_software_pipeline/modbam2bed/modbam2bed"
 
 # Meth Pacbio
 ccsmeth:
@@ -66,5 +67,4 @@ ccsmeth:
     call_freqb:
         call_mode: aggregate
         model_file: "../models/model_ccsmeth_5mCpG_aggregate_attbigru_b11.v2p.ckpt"
-
 
