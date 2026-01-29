@@ -111,7 +111,7 @@ rule all:
 #### TRF ####
 rule TRF_run:
     input:
-        get_fasta
+        fasta = get_fasta
     output:
         "results/{sample}/TRF/{sample}.fasta" + TRF_SUFFIX
     log:
@@ -120,7 +120,7 @@ rule TRF_run:
         "envs/trf.yaml"
     script:
         "scripts/run_trf.py"
-        
+
 #        # Ensure directories exist
 #        os.makedirs(os.path.dirname(output[0]), exist_ok=True)
 #        os.makedirs(os.path.dirname(log[0]), exist_ok=True)
