@@ -31,10 +31,21 @@ OPTIONS   = config["trf_params"]["options"]
 NANOPORE_DIR = config["nanopore_dir"]
 PACBIO_DIR   = config["pacbio_dir"]
 
-SAMPLES_BY_PLATFORM = config["samples"]
+SAMPLES_BY_PLATFORM = config["samples"] or {}
 
-NANOPORE_SAMPLES = list(SAMPLES_BY_PLATFORM.get("nanopore", {}).keys())
-PACBIO_SAMPLES = list(SAMPLES_BY_PLATFORM.get("pacbio", {}).keys())
+NANOPORE_DICT = SAMPLES_BY_PLATFORM.get("nanopore") or {}
+PACBIO_DICT   = SAMPLES_BY_PLATFORM.get("pacbio") or {}
+
+# Fail if neither platform has samples
+if not NANOPORE_DICT and not PACBIO_DICT:
+    raise ValueError(
+        "Config error: at least one of 'samples.nanopore' or "
+        "'samples.pacbio' must be defined with ≥1 sample."
+    )
+
+# Extract sample lists
+NANOPORE_SAMPLES = list(NANOPORE_DICT.keys())
+PACBIO_SAMPLES   = list(PACBIO_DICT.keys())
 
 SAMPLES_LIST = NANOPORE_SAMPLES + PACBIO_SAMPLES
 
