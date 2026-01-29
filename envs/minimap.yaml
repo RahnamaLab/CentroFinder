@@ -2,7 +2,9 @@ name: meth_nanopore_env
 channels:
   - conda-forge
   - bioconda
+  - epi2melabs
   - defaults
 dependencies:
   - samtools
   - minimap2
+  - modbam2bed
