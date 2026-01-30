@@ -135,7 +135,7 @@ rule TRF_convert_to_bed:
     shell:
         r"""
         mkdir -p $(dirname {output}) $(dirname {log})
-        python3 trf2bed.py \
+        python3 scripts/trf2bed.py \
             --dat {input} \
             --bed {output} \
             --tool repeatseq &> {log}
@@ -764,7 +764,7 @@ rule CENTROMERE_SCORING_python:
         r"""
         mkdir -p "{params.outdir}/logs"
 
-        python3 score_centromeres.py \
+        python3 scripts/score_centromeres.py \
           --features "{input.features}" \
           --fai "{input.fai}" \
           --outdir "{params.outdir}" \
