@@ -269,7 +269,7 @@ cdeut_1000/
 
 ```
 
-# Key Outputs
+## Key Outputs
 
 - `centro_best_candidates.bed`
  
