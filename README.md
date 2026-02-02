@@ -304,3 +304,4 @@ cdeut_1000/
 - `logs/`
   
    Log files from each pipeline step.
+## Cite
