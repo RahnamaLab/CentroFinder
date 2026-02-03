@@ -1,4 +1,4 @@
-# Created By: Sharon Colson
+# Created By: Sahar Salimi & Sharon Colson 
 # Creation Date: 12/01/2025
 # Last Modified: 01/06/2026
 
@@ -9,10 +9,10 @@
 #         OR
 #     snakemake --cores 12
 #         OR
-#     snakemake --use-conda --cores 12 results/Fo4287v4/METH_PACBIO/Fo4287v4.hifi.pbmm2.bam
-#     snakemake --use-conda --conda-frontend conda --cores 12 results/Fo4287v4/CENTROMERE_SCORING/Fo4287v4_1000/centro_candidates.bed
-#     snakemake --use-conda --conda-frontend conda --cores 12 results/Guy11_chr1/CENTROMERE_SCORING/Guy11_chr1_1000/centro_best_windows_marked.tsv
-# Create DAG: snakemake --dag results/Guy11_chr1/CENTROMERE_SCORING/Guy11_chr1.1000.te.sorted.bed | dot -Tsvg > centromere_pipeline_Guy11_chr1.svg
+#     snakemake --use-conda --cores 12 results/sample/METH_PACBIO/sample.hifi.pbmm2.bam
+#     snakemake --use-conda --conda-frontend conda --cores 12 results/sample/CENTROMERE_SCORING/sample_1000/centro_candidates.bed
+#     snakemake --use-conda --conda-frontend conda --cores 12 results/sample/CENTROMERE_SCORING/sample_1000/centro_best_windows_marked.tsv
+# Create DAG: snakemake --dag results/Guy11_chr1/CENTROMERE_SCORING/sample.1000.te.sorted.bed | dot -Tsvg > centromere_pipeline_sample.svg
 
 import os
 import subprocess

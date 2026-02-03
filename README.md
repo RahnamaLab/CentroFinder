@@ -4,7 +4,7 @@ This pipeline performs centromere detection and scoring for fungal genomes using
 
 The pipeline automatically selects the appropriate processing path based on the sequencing platform (Nanopore or PacBio).
 
-## Centromere prediction example
+## Centromere Prediction Example
 
 <p align="center">
   <img src="image/Figure_1.png" alt="CentroFinder centromere prediction example" width="800">
@@ -68,7 +68,7 @@ The container can be built following the [Singularity instructions](https://gith
 singularity build edta.sif docker://quay.io/biocontainers/edta:2.2.2--hdfd78af_1
 ```
 
-## Setting up the file structure
+## Setting Up the File Structure
 
 The file structure for storing the original data files is as follows:
 ```
@@ -200,11 +200,11 @@ edta:
 # Meth Pacbio
 ccsmeth:
     call_mod:
-        model_file: "../models/ # Location of your model files 
+        model_file: "CentroFinder/models/ # Location of your model files 
         model_ccsmeth_5mCpG_call_mods_attbigru2s_b21.v3.ckpt" # Specific model file to be used.
 
     call_freqb:
-        model_file: "../models/model_ccsmeth_5mCpG_aggregate_attbigru_b11.v2p.ckpt"
+        model_file: "CentroFinder/models/model_ccsmeth_5mCpG_aggregate_attbigru_b11.v2p.ckpt"
 ```
 ## Quick Start
 This pipeline may be run using conda environments via the included env.yaml.
@@ -240,7 +240,7 @@ snakemake --use-conda --conda-frontend conda --cores 12
 
 Specifying the output file as the target will cause Snakemake to execute all required upstream steps automatically.
 
-## Output files
+## Output Files
 
 After running the centromere prediction pipeline, results are written to a per-sample output directory using the configured window size:
 
@@ -269,7 +269,7 @@ cdeut_1000/
 
 ```
 
-# Key outputs
+## Key Outputs
 
 - `centro_best_candidates.bed`
  
@@ -304,3 +304,4 @@ cdeut_1000/
 - `logs/`
   
    Log files from each pipeline step.
+## Cite
