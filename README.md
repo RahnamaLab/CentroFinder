@@ -24,7 +24,8 @@ The following component must be available on the system **prior to setup**:
 All other workflow dependencies can be installed automatically using the provided Conda environment (see the **Quick Start** section):
 
 - snakemake>=7.22.0  
-- singularityce>=3.11.3  
+- python>=3.10
+- pip
 - graphviz>=8.0.5 (optional; used for visualizing the workflow DAG)
 
 ### Core Bioinformatics Tools
@@ -48,16 +49,9 @@ No manual installation of the following tools is required.
 ### Optional GPU-Accelerated Components
 
 GPU acceleration is supported for methylation-related steps (ccsmeth and pbccs), but is **not required** to run the pipeline.
+The required software is installed in the ccsmeth environment (`envs/ccsmeth.yaml`) automatically and will be utilized if a GPU is detected. 
 
-If GPU acceleration is desired, the following libraries must be installed and available **prior to activating Conda environments**:
-
-- pytorch>=2.1.0
-- pybedtools>=0.9.0
-- scikit-learn>=1.3.2
-- statsmodels>=0.14.0
-
-If these libraries are not available, the pipeline will fall back to CPU execution. This takes much longer to complete. 
-
+Otherwise, the pipeline will fall back to CPU execution. This takes much longer to complete.
 ### EDTA Singularity Container
 
 The pipeline requires the [EDTA transposable element annotation tool](https://github.com/oushujun/EDTA), which is executed via a Singularity container.
