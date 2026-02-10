@@ -2,10 +2,13 @@ name: ccsmeth_env
 channels:
   - conda-forge
   - bioconda
-  - defaults
 dependencies:
   - ccsmeth
   - pbccs
   - python=3.10
+  - pip
   - numpy
   - samtools=1.16.1
+  - pip:
+    - torch==2.1.0
+    - torchvision
