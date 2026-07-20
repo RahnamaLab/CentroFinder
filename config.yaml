@@ -11,14 +11,15 @@ cpus_per_task: 12
 # Centromere Scoring
 exclusion_bp_large: 100000
 exclusion_bp_min: 10000
-window: 1000
+mini_chr_cutoff: 500000  # Added: chromosomes below this length (bp) are treated as short scaffolds
+window: 100
 
 # Centromer Scoring: Scoring Model Values
-trf: 8.0
-te: 5.0
+trf: 4.0
+te: 3.0
 gene: 1.0
 meth: 1.0
-cov: 0.5
+cov: 1.0
 gc: 1.0
     
 # Specific to TRF steps 
