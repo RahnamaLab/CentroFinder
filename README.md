@@ -16,7 +16,7 @@ The CentroFinder pipeline relies on a combination of workflow tools, Conda-manag
 
 ### Workflow and Environment Management
 
-The following component must be available on the system **prior to setup**:
+The following components must be available on the system **prior to setup**:
 
 - miniconda3>=22.11.1
 - singularityce>=3.11.3
@@ -73,10 +73,14 @@ The file structure for storing the original data files is as follows:
            ├── Sample1.fastq
            └── Sample1.gff3
    └── pacbio
-       └── Sample3
-           ├── Sample3.fasta 
-           ├── Sample3.gff3
-           └── Sample3.subreads.bam   
+       └── Sample2
+           ├── Sample2.fasta 
+           ├── Sample2.gff3
+           └── Sample2.subreads.bam
+        └── Sample3
+                   ├── Sample3.fasta 
+                   ├── Sample3.gff3
+                   └── Sample3.ccs.bam  
 ```
 
 For example:
@@ -133,7 +137,7 @@ cpus_per_task: 12
 # Size (in base pairs) of the sliding window used for centromere scoring.
 # Smaller windows increase resolution but may introduce noise,
 # while larger windows provide smoother signals at lower resolution.
-window: 1000 #default
+window: 100 #default
 
 # ================================
 # Subtelomeric exclusion parameters
@@ -157,11 +161,11 @@ exclusion_bp_min: 10000 #default
 
 # Weight for tandem repeat (TRF) density.
 # Centromeres are frequently enriched in tandem repeats.
-trf: 8 #default
+trf: 4 #default
 
 # Weight for transposable element (TE) content.
 # TE-rich regions are commonly associated with fungal centromeres.
-te: 5 #default
+te: 3 #default
 
 # Weight for gene absence.
 # Centromeric regions are typically gene-poor.
@@ -173,7 +177,7 @@ meth: 1 #default
 
 # Weight for sequencing coverage anomalies.
 # Centromeres often show abnormal read depth due to repeats and mapping bias.
-cov: 0.5 #default
+cov: 1 #default
 
 # Weight for GC depletion.
 # Many fungal centromeres are AT-rich relative to chromosome averages.
