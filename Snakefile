@@ -1,6 +1,6 @@
 # Created By: Sahar Salimi & Sharon Colson 
 # Creation Date: 12/01/2025
-# Last Modified: 01/06/2026
+# Last Modified: 07/20/2026
 
 # To run this on TN Tech Univ HPC:
 #     spack load trf snakemake graphviz
@@ -48,7 +48,7 @@ NANOPORE_SAMPLES = list(NANOPORE_DICT.keys())
 PACBIO_SAMPLES   = list(PACBIO_DICT.keys())
 
 SAMPLES_LIST = NANOPORE_SAMPLES + PACBIO_SAMPLES
-
+MINI_CHR_CUTOFF = config.get("mini_chr_cutoff", 500000) # Added global definition fallback
 WINDOW = config["window"]
 
 def is_nanopore(sample):
@@ -87,7 +87,59 @@ def get_fastq(wildcards):
     return get_path_with_ext(wildcards, "fastq")
 
 def get_bam(wildcards):
-    return get_path_with_ext(wildcards, "subreads.bam")
+    base = get_base_dir(wildcards.sample)
+    ccs_bam = f"{base}/{wildcards.sample}/{wildcards.sample}.ccs.bam"
+    subreads_bam = f"{base}/{wildcards.sample}/{wildcards.sample}.subreads.bam"
+
+    if os.path.exists(ccs_bam):
+        return ccs_bam
+    elif os.path.exists(subreads_bam):
+        return subreads_bam
+    else:
+        raise ValueError(
+            f"No PacBio BAM found for sample {wildcards.sample}. "
+            f"Expected either {ccs_bam} or {subreads_bam}"
+        )
+def bam_is_ccs(bam_path):
+    header = subprocess.check_output(
+        f"samtools view -H {bam_path}",
+        shell=True,
+        text=True
+    )
+    if "READTYPE=CCS" in header:
+        return True
+
+    first = subprocess.check_output(
+        f"samtools view {bam_path} | head -1",
+        shell=True,
+        text=True
+    ).strip()
+
+    if first and "/ccs" in first.split("\t")[0]:
+        return True
+
+    return False
+
+
+def bam_has_mm_ml_tags(bam_path):
+    cmd = (
+        f"samtools view {bam_path} | head -1 | tr '\\t' '\\n' | "
+        f"grep -E '^(MM|ML):' >/dev/null && echo yes || echo no"
+    )
+    out = subprocess.check_output(cmd, shell=True, text=True).strip()
+    return out == "yes"
+
+
+def get_meth_ready_bam(wildcards):
+    bam = get_bam(wildcards)
+
+    if bam_is_ccs(bam):
+        if bam_has_mm_ml_tags(bam):
+            return f"results/{wildcards.sample}/METH_PACBIO/{wildcards.sample}.tagged.bam"
+        else:
+            return f"results/{wildcards.sample}/METH_PACBIO/{wildcards.sample}.ccsmeth.modbam.bam"
+    else:
+        return f"results/{wildcards.sample}/METH_PACBIO/{wildcards.sample}.hifi.bam"
 
 # Order for TRF and filename suffix
 TRF_NUMERIC_VALUES = [MATCH, MISMATCH, DELTA, PM, PI, MINSCORE, MAXPERIOD]
@@ -327,9 +379,34 @@ rule MN_modbam2bed:
 
 
 #### Meth Pacbio ####
+rule MP_prepare_existing_tagged_ccs:
+    input:
+        bam = get_bam
+    output:
+        bam = "results/{sample}/METH_PACBIO/{sample}.tagged.bam",
+        bai = "results/{sample}/METH_PACBIO/{sample}.tagged.bam.bai"
+    log:
+        "results/{sample}/METH_PACBIO/logs/prepare_existing_tagged_ccs_{sample}.log"
+    conda:
+        "envs/ccsmeth.yaml"
+    threads: config["cpus_per_task"]
+    shell:
+        r"""
+        mkdir -p "$(dirname {output.bam})" "$(dirname {log})"
+
+        samtools view -H {input.bam} | grep -q "READTYPE=CCS" || \
+            (echo "ERROR: {input.bam} is not CCS BAM" > {log}; exit 1)
+
+        samtools view {input.bam} | awk 'NR<=100 {{print}}' | tr '\t' '\n' | grep -E '^(MM|ML):' >/dev/null || \
+            (echo "ERROR: {input.bam} has no MM/ML tags" > {log}; exit 1)
+
+        cp {input.bam} {output.bam} >> {log} 2>&1
+        samtools index -@ {threads} {output.bam} >> {log} 2>&1
+        """
+
 rule MP_ccsmeth_call_hifi:
     input:
-        bam   = get_bam
+        bam = get_bam
     output:
         bam = "results/{sample}/METH_PACBIO/{sample}.hifi.bam"
     log:
@@ -339,20 +416,64 @@ rule MP_ccsmeth_call_hifi:
     threads: config["cpus_per_task"]
     shell:
         r"""
-        mkdir -p "$(dirname {log})"
+        mkdir -p "$(dirname {log})" "$(dirname {output.bam})"
+
+        if samtools view -H {input.bam} | grep -q "READTYPE=CCS"; then
+            echo "ERROR: {input.bam} is CCS BAM, not subreads BAM" > {log}
+            exit 1
+        fi
 
         ccsmeth call_hifi \
            --subreads {input.bam} \
            --threads {threads} \
-           --output {output.bam} &> {log}
+           --output {output.bam} >> {log} 2>&1
         """
+
+rule MP_ccsmeth_call_mods:
+    input:
+        bam = get_bam
+    output:
+        bam = "results/{sample}/METH_PACBIO/{sample}.ccsmeth.modbam.bam"
+    log:
+        "results/{sample}/METH_PACBIO/logs/ccsmeth_call_mods_{sample}.log"
+    conda:
+        "envs/ccsmeth.yaml"
+    params:
+        model_file   = config["ccsmeth"]["call_mod"]["model_file"],
+        threads_call = config["ccsmeth"]["call_mod"]["threads_call"],
+        model_type   = config["ccsmeth"]["call_mod"]["model_type"],
+        mode         = config["ccsmeth"]["call_mod"]["mode"],
+        out_prefix   = "results/{sample}/METH_PACBIO/{sample}.ccsmeth"
+    threads: config["cpus_per_task"]
+    shell:
+        r"""
+        mkdir -p "$(dirname {log})" "$(dirname {output.bam})"
+
+        samtools view -H {input.bam} | grep -q "READTYPE=CCS" || \
+            (echo "ERROR: {input.bam} is not CCS BAM" > {log}; exit 1)
+
+        if samtools view {input.bam} | awk 'NR<=100 {{print}}' | tr '\t' '\n' | grep -E '^(MM|ML):' >/dev/null; then
+            echo "ERROR: {input.bam} already has MM/ML tags" > {log}
+            exit 1
+        fi
+
+        ccsmeth call_mods \
+            --input {input.bam} \
+            --model_file {params.model_file} \
+            --output {params.out_prefix} \
+            --threads {threads} \
+            --threads_call {params.threads_call} \
+            --model_type {params.model_type} \
+            --mode {params.mode} >> {log} 2>&1
+        """
+
 
 rule MP_ccsmeth_align_reads:
     input:
         fasta = get_fasta,
-        bam   = rules.MP_ccsmeth_call_hifi.output.bam
+        bam   = get_meth_ready_bam
     output:
-        bam   = "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.bam"
+        bam = "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.bam"
     log:
         "results/{sample}/METH_PACBIO/logs/ccsmeth_align_reads_{sample}.log"
     conda:
@@ -369,43 +490,12 @@ rule MP_ccsmeth_align_reads:
            --threads {threads} &> {log}
         """
 
-rule MP_ccsmeth_call_mods:
+rule MP_ccsmeth_call_freqb:
     input:
         fasta = get_fasta,
         bam   = rules.MP_ccsmeth_align_reads.output.bam
     output:
-        "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods.modbam.bam"
-    log:
-        "results/{sample}/METH_PACBIO/logs/ccsmeth_call_mods_{sample}.log"
-    conda:
-        "envs/ccsmeth.yaml"
-    params:
-        model_file = config["ccsmeth"]["call_mod"]["model_file"],
-        threads_call = config["ccsmeth"]["call_mod"]["threads_call"],
-        model_type = config["ccsmeth"]["call_mod"]["model_type"],
-        mode = config["ccsmeth"]["call_mod"]["mode"],
-        out_prefix = "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods"
-    threads: config["cpus_per_task"]
-    shell:
-        r"""
-        mkdir -p "$(dirname {log})"
-
-        ccsmeth call_mods --input {input.bam} \
-            --ref {input.fasta} \
-            --model_file {params.model_file} \
-            --output {params.out_prefix} \
-            --threads {threads} \
-            --threads_call {params.threads_call} \
-            --model_type {params.model_type} \
-            --mode {params.mode} &> {log}
-        """
-
-rule MP_ccsmeth_call_freqb:
-    input:
-        fasta = get_fasta,
-        bam   = rules.MP_ccsmeth_call_mods.output
-    output:
-        "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods.modbam.freq.aggregate.all.bed"
+        "results/{sample}/METH_PACBIO/{sample}.methylation.freq.aggregate.all.bed"
     log:
         "results/{sample}/METH_PACBIO/logs/ccsmeth_call_freqb_{sample}.log"
     conda:
@@ -413,7 +503,7 @@ rule MP_ccsmeth_call_freqb:
     params:
         model_file = config["ccsmeth"]["call_freqb"]["model_file"],
         call_mode = config["ccsmeth"]["call_freqb"]["call_mode"],
-        out_prefix = "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods.modbam.freq"
+        out_prefix = "results/{sample}/METH_PACBIO/{sample}.methylation.freq"
     threads: config["cpus_per_task"]
     shell:
         r"""
@@ -753,6 +843,7 @@ rule CENTROMERE_SCORING_python:
         platform = lambda wc: get_platform(wc.sample),
         exclusion_bp_large = config["exclusion_bp_large"],
         exclusion_bp_min = config["exclusion_bp_min"],
+        mini_chr_cutoff = MINI_CHR_CUTOFF, 
         window = config["window"],
         trf = config["trf"],
         te = config["te"],
@@ -777,7 +868,7 @@ rule CENTROMERE_SCORING_python:
           --gc "{params.gc}" \
           --exclusion-bp-large "{params.exclusion_bp_large}" \
           --exclusion-bp-min "{params.exclusion_bp_min}" \
-          --window "{wildcards.window}" \
+          --mini-chr-cutoff "{params.mini_chr_cutoff}" \
+          --window "{params.window}" \
           &> "{log}"
         """
-
