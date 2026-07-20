@@ -152,6 +152,9 @@ exclusion_bp_large: 100000 #default
 # or mini-chromosomes, which are typically much shorter.
 exclusion_bp_min: 10000 #default
 
+# Chromosomes below this length (bp) are treated as short scaffolds
+mini_chr_cutoff: 500000  #default
+
 # ================================
 # Feature weights for centromere scoring
 # ================================
