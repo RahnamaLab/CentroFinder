@@ -7,7 +7,7 @@ The pipeline automatically selects the appropriate processing path based on the 
 ## Centromere Prediction Example
 
 <p align="center">
-  <img src="image/Figure_1.png" alt="CentroFinder centromere prediction example" width="800">
+  <img src="image/Figure 1 win 100.png" alt="CentroFinder centromere prediction example" width="800">
 </p>
 
 ## Required Software
