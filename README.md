@@ -7,7 +7,7 @@ The pipeline automatically selects the appropriate processing path based on the 
 ## Centromere Prediction Example
 
 <p align="center">
-  <img src="image/Figure 1 win 100.png" alt="CentroFinder centromere prediction example" width="800">
+  <img src="image/Figure 1 win 1000.png" alt="CentroFinder centromere prediction example" width="800">
 </p>
 
 ## Required Software
@@ -103,7 +103,7 @@ For example:
 
 The Snakefile expects input data to be located under the `data/` directory, organized by sequencing platform (`nanopore/` or `pacbio/`), followed by a directory named after the sample.
 
-The original data files must be set up in this manner and living in the correct `nanopore` or `pacbio` directory for the Snakefile to determine the proper set of steps to traverse for the pipeline. 
+The original data files must be set up in this manner and live in the correct `nanopore` or `pacbio` directory for the Snakefile to determine the proper set of steps to traverse for the pipeline. 
 
 ## About the config.yaml
 
@@ -137,7 +137,7 @@ cpus_per_task: 12
 # Size (in base pairs) of the sliding window used for centromere scoring.
 # Smaller windows increase resolution but may introduce noise,
 # while larger windows provide smoother signals at lower resolution.
-window: 100 #default
+window: 1000 #default
 
 # ================================
 # Subtelomeric exclusion parameters
