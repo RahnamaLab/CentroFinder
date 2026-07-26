@@ -168,7 +168,7 @@ trf: 4 #default
 
 # Weight for transposable element (TE) content.
 # TE-rich regions are commonly associated with fungal centromeres.
-te: 3 #default
+te: 8 #default
 
 # Weight for gene absence.
 # Centromeric regions are typically gene-poor.
