@@ -306,4 +306,4 @@ cdeut_1000/
   
    Log files from each pipeline step.
 ## Cite
-Salimi, S., Colson, S., Renfro, M., Ma, L.-J., & Rahnama, M. (2026). CentroFinder: a multi-feature framework for de novo prediction of fungal regional centromeres. Bioinformatics Advances, vbag270, [https://doi.org/10.1093/bioadv/vbag270] (https://academic.oup.com/bioinformaticsadvances/advance-article/doi/10.1093/bioadv/vbag270/8792934)
+Salimi, S., Colson, S., Renfro, M., Ma, L.-J., & Rahnama, M. (2026). CentroFinder: a multi-feature framework for de novo prediction of fungal regional centromeres. Bioinformatics Advances, vbag270, [https://doi.org/10.1093/bioadv/vbag270] 
