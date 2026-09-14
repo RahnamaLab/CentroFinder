@@ -306,4 +306,4 @@ cdeut_1000/
   
    Log files from each pipeline step.
 ## Cite
-Salimi, S., Colson, S., Renfro, M., Ma, L.-J., & Rahnama, M. (2026). CentroFinder: Accurate de novo identification of centromeres in fungal genomes. [https://doi.org/10.64898/2026.02.04.702907v1](https://www.biorxiv.org/content/10.64898/2026.02.04.702907v1)
+Salimi, S., Colson, S., Renfro, M., Ma, L.-J., & Rahnama, M. (2026). CentroFinder: a multi-feature framework for de novo prediction of fungal regional centromeres. Bioinformatics Advances, vbag270, [https://doi.org/10.1093/bioadv/vbag270] (https://academic.oup.com/bioinformaticsadvances/advance-article/doi/10.1093/bioadv/vbag270/8792934)
